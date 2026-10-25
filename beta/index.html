@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#0b1220">
 <title>Print Zone Beta</title>
 <link rel="icon" href="../Logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/beta.css?v=1">
+<link rel="stylesheet" href="css/beta.css?v=2">
 </head>
 <body>
 
@@ -55,28 +55,29 @@
   <header class="topbar">
     <div class="brand">
       <img src="../Logo.png" alt="" class="brand-logo">
-      <span class="brand-name">Print Zone</span>
-      <span class="beta-tag">BETA</span>
-      <span class="role-pill" id="rolePill"></span>
+      <div class="brand-txt">
+        <span class="brand-name">Print Zone <span class="beta-tag">BETA</span></span>
+        <span class="clock" id="clock"></span>
+      </div>
     </div>
+    <nav class="nav" id="nav">
+      <button type="button" class="nav-item active" data-page="pageNew"><i data-lucide="layout-grid"></i><span data-i18n="nav.new"></span></button>
+      <button type="button" class="nav-item" data-page="pageHistory"><i data-lucide="receipt-text"></i><span data-i18n="nav.history"></span></button>
+      <button type="button" class="nav-item" data-page="pageUnpaid"><i data-lucide="hourglass"></i><span data-i18n="nav.unpaid"></span><b class="nav-badge" id="unpaidBadge" hidden></b></button>
+      <button type="button" class="nav-item" data-page="pageExpenses"><i data-lucide="wallet"></i><span data-i18n="nav.expenses"></span></button>
+      <button type="button" class="nav-item" data-page="pageMachines"><i data-lucide="printer"></i><span data-i18n="nav.machines"></span></button>
+      <button type="button" class="nav-item admin-only" data-page="pageDashboard"><i data-lucide="bar-chart-3"></i><span data-i18n="nav.dashboard"></span></button>
+      <button type="button" class="nav-item admin-only" data-page="pageSettings"><i data-lucide="settings"></i><span data-i18n="nav.settings"></span></button>
+    </nav>
     <div class="top-tools">
       <span class="conn" id="connPill"><span class="dot"></span><span id="connTxt"></span></span>
+      <span class="role-pill" id="rolePill"></span>
       <a class="icon-btn" href="../" id="classicLink" data-i18n-title="beta.classic"><i data-lucide="external-link"></i></a>
       <button class="icon-btn" id="langBtn" type="button"></button>
       <button class="icon-btn theme-btn" id="themeBtn" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
-      <button class="icon-btn" id="logoutBtn" type="button" data-i18n-title="logout"><i data-lucide="log-out"></i></button>
+      <button class="icon-btn power" id="logoutBtn" type="button" data-i18n-title="logout"><i data-lucide="power"></i></button>
     </div>
   </header>
-
-  <nav class="nav" id="nav">
-    <button type="button" class="nav-item active" data-page="pageNew"><i data-lucide="plus-circle"></i><span data-i18n="nav.new"></span></button>
-    <button type="button" class="nav-item" data-page="pageHistory"><i data-lucide="history"></i><span data-i18n="nav.history"></span></button>
-    <button type="button" class="nav-item" data-page="pageUnpaid"><i data-lucide="clock"></i><span data-i18n="nav.unpaid"></span><b class="nav-badge" id="unpaidBadge" hidden></b></button>
-    <button type="button" class="nav-item" data-page="pageExpenses"><i data-lucide="wallet"></i><span data-i18n="nav.expenses"></span></button>
-    <button type="button" class="nav-item" data-page="pageMachines"><i data-lucide="printer"></i><span data-i18n="nav.machines"></span></button>
-    <button type="button" class="nav-item admin-only" data-page="pageDashboard"><i data-lucide="bar-chart-3"></i><span data-i18n="nav.dashboard"></span></button>
-    <button type="button" class="nav-item admin-only" data-page="pageSettings"><i data-lucide="settings"></i><span data-i18n="nav.settings"></span></button>
-  </nav>
 
   <main class="main">
 
@@ -84,30 +85,25 @@
     <section class="page active" id="pageNew">
       <div class="pos">
         <div class="pos-left">
-          <div class="panel" id="quickPanel">
-            <div class="panel-head">
-              <h2><i data-lucide="zap"></i> <span data-i18n="qp.title"></span></h2>
-              <span class="muted small" data-i18n="qp.hint"></span>
+          <div class="catalog-bar">
+            <label class="search"><i data-lucide="search"></i><input id="svcSearch" type="search" autocomplete="off" data-i18n-ph="cat.search"></label>
+            <div class="cat-tabs" id="svcCats">
+              <button type="button" class="cat-tab active" data-cat="all"><i data-lucide="layout-grid"></i><span data-i18n="cat.all"></span></button>
+              <button type="button" class="cat-tab" data-cat="print"><i data-lucide="printer"></i><span data-i18n="cat.print"></span></button>
+              <button type="button" class="cat-tab" data-cat="eng"><i data-lucide="ruler"></i><span data-i18n="cat.eng"></span></button>
+              <button type="button" class="cat-tab" data-cat="shop"><i data-lucide="shopping-bag"></i><span data-i18n="cat.shop"></span></button>
+              <button type="button" class="cat-tab" data-cat="extra"><i data-lucide="sparkles"></i><span data-i18n="cat.extra"></span></button>
             </div>
-            <div class="quick-grid" id="quickGrid"></div>
           </div>
+          <div class="svc-grid" id="svcGrid"></div>
+          <p class="builder-empty" id="svcNone" hidden data-i18n="cat.none"></p>
 
-          <div class="panel" id="builder">
-            <div class="panel-head">
-              <h2><i data-lucide="sliders-horizontal"></i> <span id="builderTitle" data-i18n="b.title"></span></h2>
-              <button class="link-btn" id="bReset" type="button" data-i18n="b.reset"></button>
-            </div>
-            <div class="svc-grid" id="svcGrid">
-              <button type="button" class="svc" data-svc="A4"><i data-lucide="file"></i><span>A4</span></button>
-              <button type="button" class="svc" data-svc="A3"><i data-lucide="file-text"></i><span>A3</span></button>
-              <button type="button" class="svc" data-svc="A5"><i data-lucide="clipboard"></i><span>A5</span></button>
-              <button type="button" class="svc" data-svc="eng"><i data-lucide="ruler"></i><span data-svc-label="eng"></span></button>
-              <button type="button" class="svc" data-svc="books"><i data-lucide="book-open"></i><span data-svc-label="books"></span></button>
-              <button type="button" class="svc" data-svc="office"><i data-lucide="paperclip"></i><span data-svc-label="office"></span></button>
-              <button type="button" class="svc" data-svc="pads"><i data-lucide="package"></i><span data-svc-label="pads"></span></button>
-              <button type="button" class="svc" data-svc="wrap"><i data-lucide="layers"></i><span data-svc-label="wrap"></span></button>
-              <button type="button" class="svc" data-svc="upload"><i data-lucide="upload"></i><span data-svc-label="upload"></span></button>
-              <button type="button" class="svc" data-svc="custom"><i data-lucide="pencil"></i><span data-svc-label="custom"></span></button>
+          <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+          <div class="panel builder" id="builder" hidden>
+            <div class="builder-head">
+              <span class="builder-ic" id="builderIc"></span>
+              <div class="builder-title"><h2 id="builderTitle"></h2><span class="muted small" id="builderSub"></span></div>
+              <button class="icon-btn sm" id="bReset" type="button" data-i18n-title="b.close"><i data-lucide="x"></i></button>
             </div>
 
             <div class="opts" id="paperOpts" hidden>
@@ -120,8 +116,8 @@
               </div>
               <div class="opt" id="optColor"><span class="opt-label" data-i18n="color.section"></span>
                 <div class="seg" id="segColor">
-                  <button type="button" data-v="black"><span data-val-label="black"></span></button>
-                  <button type="button" data-v="color"><i data-lucide="palette"></i><span data-val-label="color"></span></button>
+                  <button type="button" data-v="black"><span class="swatch bw"></span><span data-val-label="black"></span></button>
+                  <button type="button" data-v="color"><span class="swatch rgb"></span><span data-val-label="color"></span></button>
                 </div>
               </div>
               <div class="opt" id="optFace"><span class="opt-label" data-i18n="face.section"></span>
@@ -144,50 +140,55 @@
               </div>
             </div>
 
-            <div class="fields" id="bFields" hidden>
-              <div class="field grow" id="fDesc"><label for="bDesc" id="bDescLabel"></label><input id="bDesc" list="descList" autocomplete="off"><datalist id="descList"></datalist></div>
-              <div class="field" id="fLength"><label for="bLength" data-i18n="eng.length"></label><input id="bLength" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+            <div class="fields" id="bFields">
+              <div class="field price-field" id="fPrice"><label for="bPrice" id="bPriceLabel"></label><div class="money"><input id="bPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><span class="money-cur" data-i18n="cur"></span></div><small class="field-hint" id="bPriceHint"></small></div>
               <div class="field" id="fQty"><label for="bQty" data-i18n="qty"></label>
                 <div class="stepper"><button type="button" class="step" id="qtyDec" aria-label="-"><i data-lucide="minus"></i></button><input id="bQty" type="number" inputmode="numeric" min="1" placeholder="1"><button type="button" class="step" id="qtyInc" aria-label="+"><i data-lucide="plus"></i></button></div>
               </div>
-              <div class="field" id="fPrice"><label for="bPrice" id="bPriceLabel"></label><input id="bPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><small class="field-hint" id="bPriceHint"></small></div>
+              <div class="field" id="fLength"><label for="bLength" data-i18n="eng.length"></label><input id="bLength" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field grow" id="fDesc"><label for="bDesc" id="bDescLabel"></label><input id="bDesc" list="descList" autocomplete="off"><datalist id="descList"></datalist></div>
               <div class="field grow" id="fEngNote"><label for="bEngNote" data-i18n="eng.note"></label><input id="bEngNote" autocomplete="off" data-i18n-ph="eng.notePh"></div>
             </div>
-            <div class="builder-foot" id="bFoot" hidden>
+            <div class="builder-foot">
               <label class="check" id="fFinal"><input type="checkbox" id="bFinal"><span data-i18n="b.isTotal"></span></label>
               <div class="line-preview"><span class="muted" id="bHint"></span><span data-i18n="b.lineTotal"></span> <strong id="bLineTotal">0.00</strong></div>
-              <button type="button" class="btn btn-add" id="bAdd" disabled><i data-lucide="plus"></i><span id="bAddLabel" data-i18n="add"></span><kbd class="desk">↵</kbd></button>
+              <button type="button" class="btn btn-primary btn-add" id="bAdd" disabled><i data-lucide="plus"></i><span id="bAddLabel" data-i18n="add"></span><kbd class="desk">↵</kbd></button>
             </div>
-            <p class="builder-empty" id="builderEmpty" data-i18n="b.pick"></p>
           </div>
         </div>
 
         <aside class="pos-right">
-          <div class="panel cart" id="cart">
+          <div class="order" id="cart">
             <div class="edit-banner" id="editBanner" hidden><i data-lucide="pencil"></i><span id="editBannerTxt"></span><button type="button" class="link-btn" id="cancelEdit" data-i18n="edit.cancel"></button></div>
-            <div class="panel-head">
-              <h2><i data-lucide="receipt"></i> <span data-i18n="inv.title"></span></h2>
-              <button class="link-btn danger" id="cartClear" type="button" data-i18n="inv.clear"></button>
+            <div class="order-head">
+              <div class="order-who">
+                <span class="order-title" data-i18n="inv.title"></span>
+                <span class="order-sub" id="orderSub"></span>
+              </div>
+              <button class="icon-btn sm danger" id="cartClear" type="button" data-i18n-title="inv.clear"><i data-lucide="trash-2"></i></button>
             </div>
-            <div class="field"><label for="cClient" data-i18n="newtx.client"></label><input id="cClient" list="clientList" autocomplete="off" data-i18n-ph="newtx.optional"><datalist id="clientList"></datalist></div>
-            <div class="field"><label data-i18n="pay.section"></label>
-              <div class="pay-chips" id="payChips">
+            <div class="order-fields">
+              <label class="ifield"><i data-lucide="user-round"></i><input id="cClient" list="clientList" autocomplete="off" data-i18n-ph="newtx.clientPh"><datalist id="clientList"></datalist></label>
+              <label class="ifield date"><i data-lucide="calendar"></i><input type="date" id="cDate"></label>
+            </div>
+            <div class="cart-lines" id="cartLines"></div>
+            <div class="order-foot">
+              <button type="button" class="link-btn" id="noteToggle"><i data-lucide="sticky-note"></i> <span data-i18n="newtx.addNote"></span></button>
+              <textarea id="cNotes" hidden data-i18n-ph="newtx.notesPh"></textarea>
+              <div class="sums">
+                <div class="sum-row"><span data-i18n="sum.items"></span><span id="sumItems">0</span></div>
+                <div class="sum-row total"><span data-i18n="inv.total"></span><strong id="cartTotal">0.00</strong></div>
+              </div>
+              <div class="pay-grid" id="payChips">
                 <button type="button" class="pchip sel" data-pay="cash"><i data-lucide="banknote"></i><span data-pay-label="cash"></span></button>
                 <button type="button" class="pchip" data-pay="instapay"><i data-lucide="smartphone"></i><span data-pay-label="instapay"></span></button>
                 <button type="button" class="pchip" data-pay="vodafone"><i data-lucide="phone"></i><span data-pay-label="vodafone"></span></button>
-                <button type="button" class="pchip notpaid" data-pay="notpaid"><i data-lucide="clock"></i><span data-pay-label="notpaid"></span></button>
-                <button type="button" class="pchip" data-pay="other"><i data-lucide="pencil"></i><span data-pay-label="other"></span></button>
+                <button type="button" class="pchip notpaid" data-pay="notpaid"><i data-lucide="hourglass"></i><span data-pay-label="notpaid"></span></button>
+                <button type="button" class="pchip" data-pay="other"><i data-lucide="more-horizontal"></i><span data-pay-label="other"></span></button>
               </div>
-              <input id="payOther" class="mt" hidden autocomplete="off" data-i18n-ph="pay.otherPh">
+              <input id="payOther" hidden autocomplete="off" data-i18n-ph="pay.otherPh">
+              <button type="button" class="btn btn-place btn-block" id="btnSave" disabled><i data-lucide="check"></i><span id="btnSaveLabel" data-i18n="save.tx"></span><kbd class="desk">Ctrl ↵</kbd></button>
             </div>
-            <div class="cart-meta">
-              <label class="date-pill"><i data-lucide="calendar"></i><input type="date" id="cDate"></label>
-              <button type="button" class="link-btn" id="noteToggle"><i data-lucide="sticky-note"></i> <span data-i18n="newtx.addNote"></span></button>
-            </div>
-            <textarea id="cNotes" hidden data-i18n-ph="newtx.notesPh"></textarea>
-            <div class="cart-lines" id="cartLines"></div>
-            <div class="cart-total"><span data-i18n="inv.total"></span><strong id="cartTotal">0.00</strong></div>
-            <button type="button" class="btn btn-save btn-block" id="btnSave" disabled><i data-lucide="check"></i><span id="btnSaveLabel" data-i18n="save.tx"></span><kbd class="desk">Ctrl ↵</kbd></button>
           </div>
         </aside>
       </div>
@@ -272,16 +273,18 @@
           <button type="button" class="chip" data-range="week" data-i18n="range.week"></button>
           <button type="button" class="chip" data-range="month" data-i18n="range.month"></button>
           <button type="button" class="chip" data-range="lastmonth" data-i18n="range.lastmonth"></button>
+          <button type="button" class="chip" data-range="year" data-i18n="range.year"></button>
         </div>
         <label class="date-pill" data-i18n-title="range.day"><i data-lucide="calendar"></i><input type="date" id="dDay"></label>
       </div>
-      <div class="dash-top">
-        <div class="panel hero" id="dHero"></div>
-        <div class="tiles" id="dTiles"></div>
-      </div>
+      <div class="kpis" id="dKpis"></div>
+      <div class="insights" id="dInsights"></div>
       <div class="chart-grid">
         <div class="panel chart-card wide" id="cTrend"></div>
+        <div class="panel chart-card" id="cMix"></div>
         <div class="panel chart-card" id="cSvc"></div>
+        <div class="panel chart-card" id="cHeat"></div>
+        <div class="panel chart-card" id="cClients"></div>
         <div class="panel chart-card" id="cPay"></div>
         <div class="panel chart-card" id="cCosts"></div>
       </div>
@@ -361,7 +364,7 @@
   <!-- shown on phones while the cart's Save button is scrolled out of view -->
   <div class="savebar" id="saveBar" hidden>
     <div class="savebar-info"><span id="sbCount"></span><strong id="sbTotal"></strong></div>
-    <button type="button" class="btn btn-save" id="sbSave"><i data-lucide="check"></i><span data-i18n="save.short"></span></button>
+    <button type="button" class="btn btn-place" id="sbSave"><i data-lucide="check"></i><span data-i18n="save.short"></span></button>
   </div>
 </div>
 
@@ -400,11 +403,11 @@
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
 
-<script src="js/core.js?v=1"></script>
-<script src="js/pos.js?v=1"></script>
-<script src="js/lists.js?v=1"></script>
-<script src="js/dash.js?v=1"></script>
-<script src="js/settings.js?v=1"></script>
-<script src="js/boot.js?v=1"></script>
+<script src="js/core.js?v=2"></script>
+<script src="js/pos.js?v=2"></script>
+<script src="js/lists.js?v=2"></script>
+<script src="js/dash.js?v=2"></script>
+<script src="js/settings.js?v=2"></script>
+<script src="js/boot.js?v=2"></script>
 </body>
 </html>

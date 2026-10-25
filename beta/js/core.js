@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v2.0 beta';
+const APP_VERSION = 'v2.1 beta';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -126,10 +126,13 @@ const I18N = {
     'nav.machines': 'Machines', 'nav.dashboard': 'Dashboard', 'nav.settings': 'Settings',
     'toast.loginOk': 'Signed in ✓',
 
-    'qp.title': 'Quick add', 'qp.hint': 'Your most used items — one tap adds them',
-    'qp.needs': 'tap to fill in',
+    'cat.search': 'Search services…', 'cat.all': 'All', 'cat.print': 'Printing', 'cat.eng': 'Engineering',
+    'cat.shop': 'Stationery', 'cat.extra': 'Services', 'cat.none': 'No service matches your search',
+    'svcsub.A4': 'Print · copy · scan', 'svcsub.A3': 'Print · copy · scan', 'svcsub.A5': 'Print · copy · scan',
+    'svcsub.eng': 'Plans · per meter', 'svcsub.books': 'Books & notebooks', 'svcsub.office': 'Pens, files…',
+    'svcsub.pads': 'Pad binding', 'svcsub.wrap': 'Laminating', 'svcsub.upload': 'Online forms', 'svcsub.custom': 'Anything else',
+    'b.close': 'Close', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
     'b.title': 'Add an item', 'b.edit': 'Edit item', 'b.reset': 'Reset',
-    'b.pick': 'Pick a service above, or tap a quick item.',
     'b.item': 'Product', 'desc.optional': 'Description (optional)', 'custom.name': 'Service name',
     'b.isTotal': 'Price is the total for all pieces', 'b.lineTotal': 'Line total',
     'b.lastPrice': 'Last price used', 'b.update': 'Update', 'add': 'Add', 'b.editLine': 'Edit this item',
@@ -138,10 +141,10 @@ const I18N = {
     'eng.pricing': 'Pricing', 'eng.perMeter': 'Per meter', 'eng.fixed': 'Fixed price',
     'eng.length': 'Length (m)', 'eng.note': 'Note', 'eng.notePh': 'e.g. floor plan…', 'eng.m': 'm',
     'qty': 'Quantity', 'price.unit': 'Price per piece', 'price.total': 'Total price', 'price.job': 'Price', 'price.meter': 'Price per meter',
-    'inv.title': 'Current invoice', 'inv.clear': 'Clear', 'inv.empty': 'No items yet', 'inv.total': 'Total', 'inv.final': 'total price',
+    'inv.title': 'Current order', 'inv.clear': 'Clear', 'inv.empty': 'No items selected', 'inv.emptySub': 'Pick a service to get started', 'inv.total': 'Total', 'inv.final': 'total price',
     'newtx.client': 'Client', 'newtx.optional': 'Optional', 'newtx.addNote': 'Note', 'newtx.notesPh': 'Any extra details…', 'newtx.defaultClient': 'Client',
     'pay.section': 'Payment', 'pay.otherPh': 'e.g. Bank transfer…',
-    'save.tx': 'Save transaction', 'save.update': 'Update transaction', 'save.short': 'Save',
+    'save.tx': 'Place order', 'save.update': 'Update transaction', 'save.short': 'Save',
     'toast.saved': 'Saved ✓', 'toast.savedQueued': 'Saved — it will sync when the internet is back', 'toast.updated': 'Transaction updated ✓',
     'toast.saveErr': 'Could not save', 'toast.lineRemoved': 'Item removed', 'undo': 'Undo',
     'edit.banner': 'Editing the transaction of {date}', 'edit.cancel': 'Cancel',
@@ -178,14 +181,20 @@ const I18N = {
     'mach.lowerTitle': 'This reading is lower than the last one', 'mach.lowerSub': 'Last reading was {n}. Save anyway?', 'mach.saveAnyway': 'Save',
 
     'dash.title': 'Dashboard', 'range.today': 'Today', 'range.yesterday': 'Yesterday', 'range.week': 'Last 7 days',
-    'range.month': 'This month', 'range.lastmonth': 'Last month', 'range.day': 'Pick a day',
+    'range.month': 'This month', 'range.lastmonth': 'Last month', 'range.day': 'Pick a day', 'range.year': 'This year',
+    'vs.prevYear': 'vs the same days last year', 'chart.byMonth': 'Revenue by month',
+    'chart.mix': 'Revenue by category', 'chart.heat': 'Busy times (number of orders)', 'chart.heat28': 'Busy times · 4 weeks up to this day',
+    'chart.clients': 'Top clients', 'heat.fewer': 'fewer', 'heat.more': 'more', 'th.day': 'Day', 'th.orders': 'Orders', 'th.share': 'Share',
+    'kpi.vs': 'vs previous period',
+    'ins.bestDay': 'Best day', 'ins.peak': 'Busiest hour', 'ins.topSvc': 'Top service', 'ins.topClient': 'Top client',
+    'ins.pieces': 'Printed pieces', 'ins.openUnpaid': 'Unpaid orders (all time)', 'ins.share': '{p}% of revenue',
     'dash.revenue': 'Revenue', 'dash.tx': 'Transactions', 'dash.avg': 'Average ticket', 'dash.costs': 'Costs',
     'dash.net': 'Net (revenue − costs)', 'dash.unpaid': 'Not paid yet', 'dash.eng': 'Engineering meters', 'dash.pieces': 'Printed pieces',
     'vs.prevDay': 'vs the day before', 'vs.prev7': 'vs the 7 days before', 'vs.prevMonthSpan': 'vs the same days last month', 'vs.prevMonth': 'vs the month before',
     'dash.noPrev': 'nothing to compare', 'dash.nodata': 'No data for this period',
     'chart.byHour': 'Revenue by hour', 'chart.byDay': 'Revenue by day', 'chart.pay': 'Revenue by payment method',
     'chart.svc': 'Top services by revenue', 'chart.costs': 'Costs by type', 'chart.months': 'Revenue and costs by month',
-    'dash.longTerm': 'Last 6 months (all records)', 'chart.table': 'Table', 'chart.chart': 'Chart',
+    'dash.longTerm': 'Last 12 months (all records)', 'chart.table': 'Table', 'chart.chart': 'Chart',
     'legend.revenue': 'Revenue', 'legend.costs': 'Costs', 'th.period': 'Period', 'th.value': 'Value', 'th.jobs': 'Jobs', 'th.net': 'Net',
 
     'set.title': 'Settings', 'exp.title': 'Export', 'exp.from': 'From', 'exp.to': 'To',
@@ -235,10 +244,13 @@ const I18N = {
     'nav.machines': 'الماكينات', 'nav.dashboard': 'لوحة المعلومات', 'nav.settings': 'الإعدادات',
     'toast.loginOk': 'تم الدخول ✓',
 
-    'qp.title': 'إضافة سريعة', 'qp.hint': 'أكثر ما تسجله — ضغطة واحدة تضيفه',
-    'qp.needs': 'اضغط للإكمال',
+    'cat.search': 'ابحث عن خدمة…', 'cat.all': 'الكل', 'cat.print': 'طباعة', 'cat.eng': 'هندسي',
+    'cat.shop': 'أدوات', 'cat.extra': 'خدمات', 'cat.none': 'لا توجد خدمة مطابقة للبحث',
+    'svcsub.A4': 'طباعة · تصوير · سكان', 'svcsub.A3': 'طباعة · تصوير · سكان', 'svcsub.A5': 'طباعة · تصوير · سكان',
+    'svcsub.eng': 'لوحات · بالمتر', 'svcsub.books': 'كتب وكشاكيل', 'svcsub.office': 'أقلام، ملفات…',
+    'svcsub.pads': 'تكعيب', 'svcsub.wrap': 'تغليف', 'svcsub.upload': 'استمارات أونلاين', 'svcsub.custom': 'أي خدمة أخرى',
+    'b.close': 'إغلاق', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
     'b.title': 'إضافة خدمة', 'b.edit': 'تعديل الخدمة', 'b.reset': 'مسح',
-    'b.pick': 'اختر خدمة من الأعلى، أو اضغط على إضافة سريعة.',
     'b.item': 'المنتج', 'desc.optional': 'الوصف (اختياري)', 'custom.name': 'اسم الخدمة',
     'b.isTotal': 'السعر هو الإجمالي لكل القطع', 'b.lineTotal': 'إجمالي البند',
     'b.lastPrice': 'آخر سعر مستخدم', 'b.update': 'تحديث', 'add': 'إضافة', 'b.editLine': 'تعديل هذا البند',
@@ -247,10 +259,10 @@ const I18N = {
     'eng.pricing': 'التسعير', 'eng.perMeter': 'بالمتر', 'eng.fixed': 'سعر ثابت',
     'eng.length': 'الطول (متر)', 'eng.note': 'ملاحظة', 'eng.notePh': 'مثلاً: مخطط أرضي…', 'eng.m': 'متر',
     'qty': 'الكمية', 'price.unit': 'سعر القطعة', 'price.total': 'السعر الإجمالي', 'price.job': 'السعر', 'price.meter': 'سعر المتر',
-    'inv.title': 'الفاتورة الحالية', 'inv.clear': 'مسح', 'inv.empty': 'لا توجد بنود بعد', 'inv.total': 'الإجمالي', 'inv.final': 'سعر إجمالي',
+    'inv.title': 'الطلب الحالي', 'inv.clear': 'مسح', 'inv.empty': 'لا توجد بنود بعد', 'inv.emptySub': 'اختر خدمة للبدء', 'inv.total': 'الإجمالي', 'inv.final': 'سعر إجمالي',
     'newtx.client': 'العميل', 'newtx.optional': 'اختياري', 'newtx.addNote': 'ملاحظة', 'newtx.notesPh': 'أي تفاصيل إضافية…', 'newtx.defaultClient': 'عميل',
     'pay.section': 'الدفع', 'pay.otherPh': 'مثلاً: تحويل بنكي…',
-    'save.tx': 'حفظ المعاملة', 'save.update': 'تحديث المعاملة', 'save.short': 'حفظ',
+    'save.tx': 'تسجيل الطلب', 'save.update': 'تحديث المعاملة', 'save.short': 'حفظ',
     'toast.saved': 'تم الحفظ ✓', 'toast.savedQueued': 'تم الحفظ — ستتم المزامنة عند عودة الإنترنت', 'toast.updated': 'تم تحديث المعاملة ✓',
     'toast.saveErr': 'تعذر الحفظ', 'toast.lineRemoved': 'تم حذف البند', 'undo': 'تراجع',
     'edit.banner': 'تعديل معاملة يوم {date}', 'edit.cancel': 'إلغاء',
@@ -287,14 +299,20 @@ const I18N = {
     'mach.lowerTitle': 'هذه القراءة أقل من القراءة السابقة', 'mach.lowerSub': 'آخر قراءة كانت {n}. هل تريد الحفظ؟', 'mach.saveAnyway': 'حفظ',
 
     'dash.title': 'لوحة المعلومات', 'range.today': 'اليوم', 'range.yesterday': 'أمس', 'range.week': 'آخر 7 أيام',
-    'range.month': 'هذا الشهر', 'range.lastmonth': 'الشهر الماضي', 'range.day': 'اختر يوماً',
+    'range.month': 'هذا الشهر', 'range.lastmonth': 'الشهر الماضي', 'range.day': 'اختر يوماً', 'range.year': 'هذا العام',
+    'vs.prevYear': 'مقارنة بنفس الأيام من العام الماضي', 'chart.byMonth': 'الإيرادات حسب الشهر',
+    'chart.mix': 'الإيرادات حسب الفئة', 'chart.heat': 'أوقات الذروة (عدد الطلبات)', 'chart.heat28': 'أوقات الذروة · 4 أسابيع حتى هذا اليوم',
+    'chart.clients': 'أهم العملاء', 'heat.fewer': 'أقل', 'heat.more': 'أكثر', 'th.day': 'اليوم', 'th.orders': 'الطلبات', 'th.share': 'النسبة',
+    'kpi.vs': 'مقارنة بالفترة السابقة',
+    'ins.bestDay': 'أفضل يوم', 'ins.peak': 'ساعة الذروة', 'ins.topSvc': 'أعلى خدمة', 'ins.topClient': 'أهم عميل',
+    'ins.pieces': 'القطع المطبوعة', 'ins.openUnpaid': 'طلبات غير مدفوعة (الكل)', 'ins.share': '{p}% من الإيرادات',
     'dash.revenue': 'الإيرادات', 'dash.tx': 'المعاملات', 'dash.avg': 'متوسط المعاملة', 'dash.costs': 'المصاريف',
     'dash.net': 'الصافي (الإيرادات − المصاريف)', 'dash.unpaid': 'لم يُدفع بعد', 'dash.eng': 'أمتار الهندسي', 'dash.pieces': 'القطع المطبوعة',
     'vs.prevDay': 'مقارنة باليوم السابق', 'vs.prev7': 'مقارنة بالـ 7 أيام السابقة', 'vs.prevMonthSpan': 'مقارنة بنفس الأيام من الشهر الماضي', 'vs.prevMonth': 'مقارنة بالشهر السابق',
     'dash.noPrev': 'لا توجد بيانات للمقارنة', 'dash.nodata': 'لا توجد بيانات لهذه الفترة',
     'chart.byHour': 'الإيرادات حسب الساعة', 'chart.byDay': 'الإيرادات حسب اليوم', 'chart.pay': 'الإيرادات حسب طريقة الدفع',
     'chart.svc': 'أعلى الخدمات إيراداً', 'chart.costs': 'المصاريف حسب النوع', 'chart.months': 'الإيرادات والمصاريف حسب الشهر',
-    'dash.longTerm': 'آخر 6 شهور (كل السجلات)', 'chart.table': 'جدول', 'chart.chart': 'رسم',
+    'dash.longTerm': 'آخر 12 شهر (كل السجلات)', 'chart.table': 'جدول', 'chart.chart': 'رسم',
     'legend.revenue': 'الإيرادات', 'legend.costs': 'المصاريف', 'th.period': 'الفترة', 'th.value': 'القيمة', 'th.jobs': 'المرات', 'th.net': 'الصافي',
 
     'set.title': 'الإعدادات', 'exp.title': 'التصدير', 'exp.from': 'من', 'exp.to': 'إلى',
@@ -353,7 +371,21 @@ const PAY_LABELS = {
   vodafone: { en: 'Vodafone Cash', ar: 'فودافون كاش' }, notpaid: { en: 'Not Paid', ar: 'غير مدفوع' },
   other: { en: 'Other', ar: 'أخرى' },
 };
-const SVC_ICONS = { A4: 'file', A3: 'file-text', A5: 'clipboard', eng: 'ruler', books: 'book-open', office: 'paperclip', pads: 'package', wrap: 'layers', upload: 'upload', custom: 'pencil' };
+/* Service tiles: category, icon and the tile's two gradient colours */
+const SVC_DEFS = [
+  { k: 'A4', cat: 'print', icon: 'file', c: ['#3b82f6', '#1e40af'] },
+  { k: 'A3', cat: 'print', icon: 'file-text', c: ['#8b5cf6', '#5b21b6'] },
+  { k: 'A5', cat: 'print', icon: 'sticky-note', c: ['#06b6d4', '#0e7490'] },
+  { k: 'eng', cat: 'eng', icon: 'drafting-compass', c: ['#f97316', '#b45309'] },
+  { k: 'books', cat: 'shop', icon: 'book-open', c: ['#10b981', '#047857'] },
+  { k: 'office', cat: 'shop', icon: 'paperclip', c: ['#ec4899', '#9d174d'] },
+  { k: 'pads', cat: 'shop', icon: 'notebook-pen', c: ['#eab308', '#a16207'] },
+  { k: 'wrap', cat: 'extra', icon: 'layers', c: ['#6366f1', '#3730a3'] },
+  { k: 'upload', cat: 'extra', icon: 'cloud-upload', c: ['#0ea5e9', '#075985'] },
+  { k: 'custom', cat: 'extra', icon: 'wand-sparkles', c: ['#64748b', '#334155'] },
+];
+const SVC_DEF = Object.fromEntries(SVC_DEFS.map(d => [d.k, d]));
+const SVC_ICONS = Object.fromEntries(SVC_DEFS.map(d => [d.k, d.icon]));
 
 let lang = localStorage.getItem('pz_lang') || 'ar';
 function t(key, vars) {
@@ -683,18 +715,28 @@ function applyI18n() {
   $('langBtn').textContent = other; $('langLogin').textContent = other;
   $('langBtn').title = $('langLogin').title = lang === 'ar' ? 'English' : 'العربية';
   updateConnPill();
+  updateClock();
   if (state.role) { $('rolePill').textContent = t('role.' + state.role); onLangChange.forEach(fn => fn()); renderActivePage(); }
 }
 const onLangChange = [];
 function toggleLang() { lang = lang === 'ar' ? 'en' : 'ar'; localStorage.setItem('pz_lang', lang); applyI18n(); }
-if (localStorage.getItem('pz_theme') === 'dark') document.documentElement.classList.add('dark');
+/* The beta opens in its dark POS theme; its choice is kept apart from the classic app's */
+if (localStorage.getItem('pz_beta_theme') !== 'light') document.documentElement.classList.add('dark');
 function toggleTheme() {
   document.documentElement.classList.toggle('dark');
-  localStorage.setItem('pz_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  localStorage.setItem('pz_beta_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   if (state.page === 'pageDashboard') renderActivePage();
 }
 ['langBtn', 'langLogin'].forEach(id => $(id).addEventListener('click', toggleLang));
 ['themeBtn', 'themeLogin'].forEach(id => $(id).addEventListener('click', toggleTheme));
+
+/* Date and time in the top bar */
+function updateClock() {
+  const now = new Date(), loc = lang === 'ar' ? 'ar-EG' : 'en-GB';
+  $('clock').textContent = now.toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' +
+    now.toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+setInterval(updateClock, 15000);
 
 function updateConnPill() {
   const pill = $('connPill');

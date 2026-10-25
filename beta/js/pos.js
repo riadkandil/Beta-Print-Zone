@@ -73,80 +73,43 @@ function suggestPrice(it) {
   return p != null ? p : null;
 }
 
-/* ---------- quick picks: the most frequent items of the last 400 transactions ---------- */
-function templateFrom(it) {
-  const paper = it.type === 'paper';
-  const scan = paper && it.op === 'scan';
-  return {
-    type: it.type, svc: it.svc, op: paper ? it.op : null,
-    color: paper && !scan ? (it.color && it.color !== '—' ? it.color : 'black') : '—',
-    face: paper && !scan ? (it.face && it.face !== '—' ? it.face : 'one') : '—',
-    finish: paper && !scan ? (it.finish && it.finish !== '—' ? it.finish : 'normal') : '—',
-    desc: paper ? null : (it.desc || null),
-    engPerMeter: it.svc === 'eng' ? !!it.engPerMeter : false,
-    noQty: paper && (it.svc === 'eng' || scan),
-  };
+/* ---------- service tiles ---------- */
+const TILES = { cat: 'all', q: '' };
+function tileMatches(d) {
+  if (TILES.cat !== 'all' && d.cat !== TILES.cat) return false;
+  const q = TILES.q.trim().toLowerCase();
+  if (!q) return true;
+  const names = [d.k, SVC_LABELS[d.k].en, SVC_LABELS[d.k].ar, I18N.en['svcsub.' + d.k], I18N.ar['svcsub.' + d.k]];
+  return names.some(n => String(n).toLowerCase().includes(q));
 }
-const DEFAULT_PICKS = [
-  { type: 'paper', svc: 'A4', op: 'print', color: 'black' },
-  { type: 'paper', svc: 'A4', op: 'print', color: 'color' },
-  { type: 'paper', svc: 'A4', op: 'copy', color: 'black' },
-  { type: 'paper', svc: 'A4', op: 'scan' },
-  { type: 'paper', svc: 'A3', op: 'print', color: 'black' },
-  { type: 'paper', svc: 'eng', op: 'print', color: 'black', engPerMeter: true },
-  { type: 'paper', svc: 'eng', op: 'scan', engPerMeter: true },
-  { type: 'simple', svc: 'wrap' },
-].map(templateFrom);
-const quickPicks = memoTx(() => {
-  const freq = new Map();
-  let n = 0;
-  for (const tx of liveTx()) {
-    if (++n > 400) break;
-    for (const it of tx.items || []) {
-      const tpl = templateFrom(it), k = itemKey(tpl);
-      const f = freq.get(k);
-      if (f) f.count++; else freq.set(k, { tpl, count: 1 });
-    }
-  }
-  const picks = [...freq.values()].filter(f => f.count >= 2).sort((a, b) => b.count - a.count).slice(0, 8).map(f => f.tpl);
-  // a default is skipped when a learned pick already covers the same service and operation (e.g. engineering scan at a fixed price)
-  const loose = p => [p.type, p.svc, p.op, p.color, p.type === 'paper' ? '' : (p.desc || '')].join('|');
-  for (const d of DEFAULT_PICKS) { if (picks.length >= 8) break; if (!picks.some(p => loose(p) === loose(d))) picks.push(d); }
-  return picks;
-});
-function tileNeedsInput(tpl, price) {
-  if (!(price > 0)) return true;
-  if (tpl.svc === 'eng' && (tpl.op !== 'scan' || tpl.engPerMeter)) return true;
-  return (CATALOG_SVCS.includes(tpl.svc) || tpl.svc === 'custom') && !tpl.desc;
-}
-let shownPicks = [];
-function renderQuick() {
-  shownPicks = quickPicks();
-  $('quickGrid').innerHTML = shownPicks.map((p, i) => {
-    const price = suggestPrice(p);
-    const needs = tileNeedsInput(p, price);
-    const priceTxt = price != null ? fmtNum(price) + (p.engPerMeter ? ' / ' + t('eng.m') : '') : '';
-    const sub = needs ? [priceTxt, t('qp.needs')].filter(Boolean).join(' · ') : priceTxt;
-    return `<button type="button" class="qp${needs ? ' needs' : ''}" data-i="${i}">
-      <span class="qp-ic">${ic(SVC_ICONS[p.svc] || 'file')}</span>
-      <span class="qp-txt"><span class="qp-name">${escapeHtml(itemTitle(p))}</span><span class="qp-price">${escapeHtml(sub)}</span></span>
-      ${needs ? ic('chevron-left', 'qp-go') : ic('plus', 'qp-go')}
+function renderTiles() {
+  const counts = {};
+  cart.lines.forEach(l => { counts[l.svc] = (counts[l.svc] || 0) + 1; });
+  const shown = SVC_DEFS.filter(tileMatches);
+  $('svcGrid').innerHTML = shown.map(d => {
+    const paper = d.cat === 'print';
+    const n = counts[d.k] || 0;
+    return `<button type="button" class="svc${B.svc === d.k ? ' sel' : ''}" data-svc="${d.k}" aria-pressed="${B.svc === d.k}" style="--c1:${d.c[0]};--c2:${d.c[1]}">
+      <span class="svc-art">${paper ? `<span class="svc-mark">${d.k}</span>` : ''}<span class="svc-ic">${ic(d.icon) || ic('file')}</span></span>
+      <span class="svc-body"><span class="svc-name">${escapeHtml(svcLabel(d.k))}</span><span class="svc-sub">${escapeHtml(t('svcsub.' + d.k))}</span></span>
+      ${n ? `<span class="svc-badge">${n}</span>` : ''}
     </button>`;
   }).join('');
+  $('svcNone').hidden = shown.length > 0;
 }
-$('quickGrid').addEventListener('click', e => {
-  const b = e.target.closest('.qp'); if (!b) return;
-  const tpl = shownPicks[+b.dataset.i]; if (!tpl) return;
-  const price = suggestPrice(tpl);
-  if (tileNeedsInput(tpl, price)) {
-    loadIntoBuilder({ ...tpl, qty: 1, price, isFinal: false, engLength: null, engNote: '' }, null, true);
-    scrollToBuilder();
-    focusFirstField(true);
-    return;
-  }
-  const eng = tpl.svc === 'eng';
-  addLine({ ...tpl, qty: 1, price, total: round2(price), engLength: eng ? 0 : null, engNote: eng ? '' : null, isFinal: false });
-  b.classList.remove('added'); void b.offsetWidth; b.classList.add('added');
+$('svcCats').addEventListener('click', e => {
+  const b = e.target.closest('.cat-tab'); if (!b) return;
+  TILES.cat = b.dataset.cat;
+  qsa('#svcCats .cat-tab').forEach(x => x.classList.toggle('active', x === b));
+  renderTiles();
+});
+$('svcSearch').addEventListener('input', () => { TILES.q = $('svcSearch').value; renderTiles(); });
+/* Enter in the search box opens the first matching service */
+$('svcSearch').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  e.preventDefault();
+  const first = SVC_DEFS.find(tileMatches);
+  if (first) selectSvc(first.k);
 });
 
 /* ---------- builder ---------- */
@@ -168,9 +131,16 @@ function fillDescList() {
 function updateBuilder(opts = {}) {
   const has = !!B.svc, paper = isPaperSvc(B.svc), eng = B.svc === 'eng', qtyless = bQtyless();
   qsa('#svcGrid .svc').forEach(b => { const on = b.dataset.svc === B.svc; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); });
-  $('builderEmpty').hidden = has;
-  $('bFields').hidden = !has;
-  $('bFoot').hidden = !has;
+  $('builder').hidden = !has;
+  $('sheetBackdrop').hidden = !has;
+  document.body.classList.toggle('sheet-open', has);
+  if (has) {
+    const d = SVC_DEF[B.svc];
+    $('builder').style.setProperty('--c1', d.c[0]);
+    $('builder').style.setProperty('--c2', d.c[1]);
+    $('builderIc').innerHTML = ic(d.icon) || ic('file');
+    $('builderSub').textContent = t('svcsub.' + B.svc);
+  }
   $('paperOpts').hidden = !paper;
   if (paper) {
     setSeg('segOp', B.op); setSeg('segColor', B.color); setSeg('segFace', B.face); setSeg('segFinish', B.finish);
@@ -189,7 +159,7 @@ function updateBuilder(opts = {}) {
   $('fFinal').hidden = qtyless;
   if (qtyless) $('bFinal').checked = false;
   $('bPriceLabel').textContent = eng && B.engPerMeter ? t('price.meter') : qtyless ? t('price.job') : $('bFinal').checked ? t('price.total') : t('price.unit');
-  $('builderTitle').textContent = t(B.editLineId ? 'b.edit' : 'b.title');
+  $('builderTitle').textContent = has ? (B.editLineId ? t('b.edit') + ' · ' : '') + svcLabel(B.svc) : '';
   $('bAddLabel').textContent = t(B.editLineId ? 'b.update' : 'add');
   if (!opts.keepPrice) prefillPrice();
   refreshBuilderState();
@@ -218,11 +188,16 @@ function clearFields() {
 }
 function resetBuilder() { B.svc = null; B.editLineId = null; clearFields(); updateBuilder(); renderCart(); }
 function selectSvc(svc) {
-  B.svc = svc;
-  if (isPaperSvc(svc)) { B.op = 'print'; B.color = 'black'; B.face = 'one'; B.finish = 'normal'; }
-  clearFields();
-  updateBuilder();
-  focusFirstField();
+  if (B.svc !== svc || B.editLineId) {
+    B.svc = svc;
+    B.editLineId = null;
+    if (isPaperSvc(svc)) { B.op = 'print'; B.color = 'black'; B.face = 'one'; B.finish = 'normal'; }
+    clearFields();
+    updateBuilder();
+    renderCart();
+  }
+  scrollToBuilder();
+  focusPrice();
 }
 /* priceIsSuggestion: true when loading a quick pick, so option changes can still re-suggest the price */
 function loadIntoBuilder(it, lineId, priceIsSuggestion) {
@@ -244,20 +219,19 @@ function loadIntoBuilder(it, lineId, priceIsSuggestion) {
   B.priceAuto = !!priceIsSuggestion && it.price > 0;
   updateBuilder({ keepPrice: true });
 }
-/* Focus the first empty field. On touch screens only when there is nothing left to tap,
-   so the keyboard does not cover the option buttons. */
-function focusFirstField(force) {
+/* Choosing a service or an option always lands on the price, selected so typing replaces a remembered price */
+function focusPrice() {
   if (!B.svc) return;
-  const nothingToTap = !isPaperSvc(B.svc) || B.op === 'scan';
-  if (!finePointer && !nothingToTap && !force) return;
-  const el = ['bDesc', 'bLength', 'bQty', 'bPrice'].map($).find(x => isVisible(x) && !x.value) || $('bPrice');
-  if (!isVisible(el)) return;
-  el.focus({ preventScroll: !finePointer });
-  if (el.select) el.select();
+  const el = $('bPrice');
+  el.focus({ preventScroll: true });
+  el.select();
 }
+/* Phones and narrow tablets show the builder as a bottom sheet */
+const isSheet = () => matchMedia('(max-width:859px)').matches;
 function scrollToBuilder() {
+  if (isSheet()) return;
   const r = $('builder').getBoundingClientRect();
-  if (r.top < 60 || r.top > innerHeight * 0.6) $('builder').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (r.bottom > innerHeight - 8 || r.top < 70) $('builder').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function addFromBuilder() {
   if (!B.svc) return;
@@ -272,8 +246,10 @@ function addFromBuilder() {
   } else addLine(it);
   if (CATALOG_SVCS.includes(it.svc) && it.desc) rememberCatalog(it.svc, it.desc);
   clearFields();
+  // phones close the sheet to show the order; larger screens keep the service open for the next similar item
+  if (isSheet()) { B.svc = null; updateBuilder(); renderTiles(); return; }
   updateBuilder();
-  focusFirstField();
+  focusPrice();
 }
 function rememberCatalog(svc, name) {
   const cat = { books: [], office: [], ...(state.catalog || {}) };
@@ -287,7 +263,7 @@ function onSeg(id, apply) {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     apply(b.dataset.v);
     updateBuilder();
-    focusFirstField();
+    focusPrice();
   });
 }
 onSeg('segOp', v => { B.op = v; });
@@ -296,6 +272,7 @@ onSeg('segFace', v => { B.face = v; });
 onSeg('segFinish', v => { B.finish = v; });
 onSeg('segEngPm', v => { B.engPerMeter = v === 'meter'; });
 $('svcGrid').addEventListener('click', e => { const b = e.target.closest('.svc'); if (b) selectSvc(b.dataset.svc); });
+$('sheetBackdrop').addEventListener('click', resetBuilder);
 $('bPrice').addEventListener('input', () => { B.priceAuto = false; refreshBuilderState(); });
 ['bQty', 'bLength', 'bEngNote'].forEach(id => $(id).addEventListener('input', refreshBuilderState));
 $('bDesc').addEventListener('input', () => { prefillPrice(); refreshBuilderState(); });
@@ -304,14 +281,17 @@ $('qtyInc').addEventListener('click', () => { $('bQty').value = readQty() + 1; r
 $('qtyDec').addEventListener('click', () => { const q = readQty(); $('bQty').value = q > 2 ? q - 1 : ''; refreshBuilderState(); });
 $('bReset').addEventListener('click', resetBuilder);
 $('bAdd').addEventListener('click', addFromBuilder);
-/* Enter adds the item when it is complete, otherwise moves to the next empty field */
+/* Enter walks price → quantity → any required field still empty, then adds the item */
+const requiredEmpty = el => isVisible(el) && !el.value && (el.id === 'bLength' || (el.id === 'bDesc' && (CATALOG_SVCS.includes(B.svc) || B.svc === 'custom')));
 ['bDesc', 'bLength', 'bQty', 'bPrice', 'bEngNote'].forEach(id => $(id).addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
   e.preventDefault();
   if (e.ctrlKey || e.metaKey) return; // Ctrl+Enter is handled below (add + save)
-  if (!$('bAdd').disabled) { addFromBuilder(); return; }
-  const next = ['bDesc', 'bLength', 'bQty', 'bPrice'].map($).find(el => el !== e.target && isVisible(el) && !el.value);
-  if (next) { next.focus(); if (next.select) next.select(); }
+  let next = null;
+  if (e.target.id === 'bPrice' && isVisible($('bQty')) && $('bPrice').value) next = $('bQty');
+  if (!next) next = ['bPrice', 'bLength', 'bDesc'].map($).find(el => el !== e.target && (el.id === 'bPrice' ? isVisible(el) && !el.value : requiredEmpty(el)));
+  if (next) { next.focus(); if (next.select) next.select(); return; }
+  if (!$('bAdd').disabled) addFromBuilder();
 }));
 
 /* ---------- cart ---------- */
@@ -340,7 +320,9 @@ function renderCart(pulseId) {
   $('cartLines').innerHTML = lines.length ? lines.map(l => {
     const sub = lineSub(l);
     const step = l.noQty || l.isFinal ? '' : `<span class="qty-step"><button type="button" data-act="dec" aria-label="-">${ic('minus')}</button><b>${l.qty}</b><button type="button" data-act="inc" aria-label="+">${ic('plus')}</button></span>`;
+    const d = SVC_DEF[l.svc] || SVC_DEF.custom;
     return `<div class="line${l.id === B.editLineId ? ' editing' : ''}${l.id === pulseId ? ' pulse' : ''}" data-id="${l.id}">
+      <span class="line-ic" style="--c1:${d.c[0]};--c2:${d.c[1]}">${ic(d.icon) || ic('file')}</span>
       <button type="button" class="line-main" data-act="edit" title="${escapeHtml(t('b.editLine'))}">
         <span class="line-title">${escapeHtml(itemTitle(l))}</span>${sub ? `<span class="line-sub">${escapeHtml(sub)}</span>` : ''}
       </button>
@@ -348,9 +330,12 @@ function renderCart(pulseId) {
       <span class="line-total">${fmtNum(l.total)}</span>
       <button type="button" class="icon-btn sm ghost" data-act="del" aria-label="${escapeHtml(t('hist.delete'))}">${ic('x')}</button>
     </div>`;
-  }).join('') : `<div class="cart-empty">${ic('shopping-cart')}<span>${t('inv.empty')}</span></div>`;
+  }).join('') : `<div class="cart-empty"><span class="cart-empty-ic">${ic('shopping-cart')}</span><strong>${t('inv.empty')}</strong><span>${t('inv.emptySub')}</span></div>`;
   const total = lines.reduce((s, l) => s + l.total, 0);
   $('cartTotal').textContent = fmtMoney(total);
+  $('sumItems').textContent = lines.length;
+  $('orderSub').textContent = cart.editingTx ? fmtDate(cart.editingTx.date) : t('order.no', { n: liveTx().filter(tx => tx.date === todayStr()).length + 1 });
+  renderTiles();
   $('btnSave').disabled = !lines.length || saving;
   $('sbCount').textContent = t('cart.items', { n: lines.length });
   $('sbTotal').textContent = fmtMoney(total);
@@ -370,7 +355,7 @@ $('cartLines').addEventListener('click', e => {
   if (act === 'inc') { l.qty++; l.total = round2(l.qty * l.price); renderCart(); }
   else if (act === 'dec') { if (l.qty > 1) { l.qty--; l.total = round2(l.qty * l.price); renderCart(); } else removeLine(i); }
   else if (act === 'del') removeLine(i);
-  else if (act === 'edit') { loadIntoBuilder(l, l.id, false); renderCart(); scrollToBuilder(); focusFirstField(true); }
+  else if (act === 'edit') { loadIntoBuilder(l, l.id, false); renderCart(); scrollToBuilder(); focusPrice(); }
 });
 $('cartClear').addEventListener('click', () => {
   if (cart.editingTx) { resetCart(); return; }
@@ -485,12 +470,13 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     if (B.svc && !$('bAdd').disabled) addFromBuilder();
+    if (B.svc && isSheet()) resetBuilder();
     saveTx();
   } else if (e.key === 'Escape' && B.svc) resetBuilder();
 });
 
 pageRenderers.pageNew = function renderPos() {
-  renderQuick();
+  renderCart();
   fillClientList();
   if (!cart.dateTouched) $('cDate').value = todayStr();
   if (B.svc) { if (!isPaperSvc(B.svc)) fillDescList(); if (B.priceAuto) prefillPrice(); refreshBuilderState(); }
