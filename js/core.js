@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v2.6 beta';
+const APP_VERSION = 'v3.0';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -216,7 +216,7 @@ const I18N = {
     'machset.delConfirm': 'Delete this machine?', 'machset.delConfirmSub': 'All its readings will be deleted too.', 'toast.machSaved': 'Machines updated ✓',
     'cat.title': 'Product lists', 'cat.desc': 'Products offered when recording Stationery and Office supplies. New names typed while recording are added automatically.',
     'cat.addPh': 'Add a product…', 'cat.add': 'Add', 'cat.empty': 'No products yet', 'toast.catSaved': 'List updated ✓',
-    'about.title': 'About this beta', 'about.desc': 'The beta uses the same database as the classic version: everything recorded here also appears there, and the other way round.',
+    'about.title': 'About', 'about.desc': 'Print Zone shares one database with the classic version (still available as a fallback): everything recorded in one appears in the other.',
 
     'xh.no': '#', 'xh.date': 'Date', 'xh.time': 'Time', 'xh.client': 'Client', 'xh.by': 'Recorded by', 'xh.notes': 'Notes',
     'xh.pay': 'Payment', 'xh.svc': 'Service', 'xh.detail': 'Detail', 'xh.color': 'Color', 'xh.sides': 'Sides',
@@ -341,7 +341,7 @@ const I18N = {
     'machset.delConfirm': 'حذف هذه الماكينة؟', 'machset.delConfirmSub': 'سيتم حذف كل قراءاتها أيضاً.', 'toast.machSaved': 'تم تحديث الماكينات ✓',
     'cat.title': 'قوائم المنتجات', 'cat.desc': 'المنتجات المعروضة عند تسجيل الكتابية والأدوات المكتبية. الأسماء الجديدة التي تُكتب أثناء التسجيل تُضاف تلقائياً.',
     'cat.addPh': 'أضف منتجاً…', 'cat.add': 'إضافة', 'cat.empty': 'لا توجد منتجات بعد', 'toast.catSaved': 'تم تحديث القائمة ✓',
-    'about.title': 'عن النسخة التجريبية', 'about.desc': 'النسخة التجريبية تستخدم نفس قاعدة بيانات النسخة الكلاسيكية: كل ما يُسجل هنا يظهر هناك، والعكس.',
+    'about.title': 'عن التطبيق', 'about.desc': 'يستخدم Print Zone نفس قاعدة بيانات النسخة الكلاسيكية (المتاحة كنسخة احتياطية): كل ما يُسجل في إحداهما يظهر في الأخرى.',
 
     'xh.no': 'رقم', 'xh.date': 'التاريخ', 'xh.time': 'الوقت', 'xh.client': 'العميل', 'xh.by': 'سجّلها', 'xh.notes': 'الملاحظات',
     'xh.pay': 'الدفع', 'xh.svc': 'الخدمة', 'xh.detail': 'التفصيل', 'xh.color': 'اللون', 'xh.sides': 'الأوجه',
@@ -787,7 +787,7 @@ $('navBackdrop').addEventListener('click', () => setNavOpen(false));
 function applyI18n() {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  document.title = 'Print Zone Beta';
+  document.title = 'Print Zone';
   qsa('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   qsa('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
   qsa('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
@@ -805,7 +805,7 @@ function applyI18n() {
 }
 const onLangChange = [];
 function toggleLang() { lang = lang === 'ar' ? 'en' : 'ar'; localStorage.setItem('pz_lang', lang); applyI18n(); }
-/* The beta opens light unless dark was chosen; its choice is kept apart from the classic app's */
+/* The app opens light unless dark was chosen; its choice is kept apart from the classic app's */
 if (localStorage.getItem('pz_beta_theme') === 'dark') document.documentElement.classList.add('dark');
 /* Light and dark mode each come in several shades of blue, chosen in Settings and kept per device */
 const LIGHT_THEMES = [

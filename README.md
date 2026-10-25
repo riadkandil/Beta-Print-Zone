@@ -2,7 +2,8 @@
 Transactions Recorder Web App
 
 ## Versions
-- `/` — the classic app (v1.12).
-- `/beta/` — Print Zone Beta (v2.0): a redesigned app on the **same database**. Everything recorded in one version appears in the other, and the sign-in carries over between them.
+- `/` — **Print Zone v3.0**, the main app (formerly the beta).
+- `/classic/` — the classic app (v1.12), kept as a fallback on the **same database**: everything recorded in one appears in the other, and the sign-in carries over between them.
+- `/beta/` — redirects to `/` so old links keep working.
 
-Both versions record scans and engineering work without a quantity (engineering is priced by length or at a fixed price).
+See [APP-SUMMARY.md](APP-SUMMARY.md) for the design, features, data model and change log.

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Print Zone — مركز الطباعة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/lucide@0.378.0/dist/umd/lucide.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="css/styles.css?v=6">
+</head>
+<body>
+
+<div class="bg-orb orb-1" aria-hidden="true"></div>
+<div class="bg-orb orb-2" aria-hidden="true"></div>
+<div class="bg-orb orb-3" aria-hidden="true"></div>
+
+<!-- ==================== LOADING VIEW ==================== -->
+<div id="loadingView">
+  <img src="../Logo.png" class="loading-logo" alt="Print Zone">
+  <div class="loading-name">Print Zone</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-status" id="loadingStatus"></div>
+</div>
+
+<!-- ==================== LOGIN VIEW ==================== -->
+<div class="login-wrap" id="loginView" style="display:none">
+  <div class="login-card">
+    <div class="login-top-controls">
+      <button class="icon-btn lang-btn" id="langToggleLogin"></button>
+      <button class="icon-btn" id="themeToggleLogin"><span class="icon-light"><i data-lucide="moon"></i></span><span class="icon-dark"><i data-lucide="sun"></i></span></button>
+    </div>
+    <div class="login-logo"><img src="../Logo.png" alt="Print Zone"></div>
+    <div class="login-name">Print Zone</div>
+    <div class="login-tag" data-i18n="app.tag"></div>
+    <div class="role-grid">
+      <div class="role-card" id="roleEmployee">
+        <div class="role-icon"><i data-lucide="user"></i></div>
+        <div class="role-name" data-i18n="login.employee"></div>
+        <div class="role-sub" data-i18n="login.employeeSub"></div>
+      </div>
+      <div class="role-card" id="roleAdmin">
+        <div class="role-icon"><i data-lucide="shield"></i></div>
+        <div class="role-name" data-i18n="login.admin"></div>
+        <div class="role-sub" data-i18n="login.adminSub"></div>
+      </div>
+    </div>
+    <div class="login-pw-area" id="loginPwArea">
+      <label data-i18n="login.password"></label>
+      <input type="password" id="loginPw" autocomplete="current-password">
+      <div class="login-error" id="loginError"></div>
+      <button class="btn-login" id="btnLogin" data-i18n="login.enter"></button>
+    </div>
+    <div class="login-mode-note" id="loginModeNote"></div>
+    <div class="login-ver" id="loginVer"></div>
+  </div>
+</div>
+
+<!-- ==================== APP VIEW ==================== -->
+<div id="appView">
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><img src="../Logo.png" alt=""></div>
+    <span class="brand-name">Print Zone</span>
+    <span class="role-pill" id="rolePill"></span>
+    <span class="app-ver" id="appVer"></span>
+  </div>
+  <div class="topbar-controls">
+    <div class="conn-pill" id="connPill"><span class="conn-dot"></span><span class="conn-txt" id="connTxt"></span></div>
+    <button class="icon-btn lang-btn" id="langToggle"></button>
+    <button class="icon-btn" id="themeToggle"><span class="icon-light"><i data-lucide="moon"></i></span><span class="icon-dark"><i data-lucide="sun"></i></span></button>
+    <button class="icon-btn" id="btnLogout"><i data-lucide="log-out"></i></button>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+
+<!-- PAGE: NEW TRANSACTION -->
+<div class="page active" id="pageNew">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="plus"></i></span> <span data-i18n="newtx.title"></span></div>
+    <div class="form-row">
+      <div class="field" style="flex:1.2">
+        <label data-i18n="newtx.client"></label>
+        <input type="text" id="clientName" data-i18n-ph="newtx.optional">
+      </div>
+      <div class="field" style="flex:0.8">
+        <label data-i18n="newtx.date"></label>
+        <input type="date" id="txDate">
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label data-i18n="newtx.notes"></label>
+      <textarea id="txNotes" data-i18n-ph="newtx.notesPh"></textarea>
+    </div>
+    <div class="section-label" style="margin-top:12px"><span class="dot"></span> <span data-i18n="pay.section"></span></div>
+    <div class="chip-row" id="payChips">
+      <div class="chip sel" data-pay="cash"><i data-lucide="banknote"></i> <span data-pay-label="cash"></span></div>
+      <div class="chip" data-pay="instapay"><i data-lucide="smartphone"></i> <span data-pay-label="instapay"></span></div>
+      <div class="chip" data-pay="vodafone"><i data-lucide="phone"></i> <span data-pay-label="vodafone"></span></div>
+      <div class="chip" data-pay="notpaid"><i data-lucide="clock"></i> <span data-pay-label="notpaid"></span></div>
+      <div class="chip" data-pay="other"><i data-lucide="pencil"></i> <span data-pay-label="other"></span></div>
+    </div>
+    <div class="field" id="payOtherField" style="display:none;margin-top:10px">
+      <label data-i18n="pay.specify"></label>
+      <input type="text" id="payOtherName" data-i18n-ph="pay.otherPh">
+    </div>
+  </div>
+
+  <div class="price-mode-toggle">
+    <span class="price-mode-label"><i data-lucide="tag"></i> <span data-i18n="price.mode"></span></span>
+    <div class="price-mode-options">
+      <button class="price-mode-btn active" id="btnPerItem" type="button" data-i18n="price.perItem"></button>
+      <button class="price-mode-btn" id="btnFinalPrice" type="button" data-i18n="price.final"></button>
+    </div>
+  </div>
+
+  <div class="section-label"><span class="dot"></span> <span data-i18n="svc.section"></span></div>
+  <div class="service-grid" id="serviceGrid">
+    <div class="svc-btn" data-svc="A4"><span class="svc-icon"><i data-lucide="file"></i></span><span>A4</span></div>
+    <div class="svc-btn" data-svc="A3"><span class="svc-icon"><i data-lucide="file-text"></i></span><span>A3</span></div>
+    <div class="svc-btn" data-svc="A5"><span class="svc-icon"><i data-lucide="clipboard"></i></span><span>A5</span></div>
+    <div class="svc-btn" data-svc="eng"><span class="svc-icon"><i data-lucide="ruler"></i></span><span data-svc-label="eng"></span></div>
+    <div class="svc-btn" data-svc="books"><span class="svc-icon"><i data-lucide="book-open"></i></span><span data-svc-label="books"></span></div>
+    <div class="svc-btn" data-svc="office"><span class="svc-icon"><i data-lucide="paperclip"></i></span><span data-svc-label="office"></span></div>
+    <div class="svc-btn" data-svc="pads"><span class="svc-icon"><i data-lucide="package"></i></span><span data-svc-label="pads"></span></div>
+    <div class="svc-btn" data-svc="wrap"><span class="svc-icon"><i data-lucide="layers"></i></span><span data-svc-label="wrap"></span></div>
+    <div class="svc-btn" data-svc="upload"><span class="svc-icon"><i data-lucide="upload"></i></span><span data-svc-label="upload"></span></div>
+  </div>
+
+  <!-- Paper sub options -->
+  <div class="sub-panel" id="subPanel">
+    <div class="sub-row">
+      <div class="section-label"><span class="dot"></span> <span data-i18n="op.section"></span></div>
+      <div class="chip-row" id="opChips">
+        <div class="chip" data-op="print"><i data-lucide="printer"></i> <span data-op-label="print"></span></div>
+        <div class="chip" data-op="scan"><i data-lucide="scan"></i> <span data-op-label="scan"></span></div>
+        <div class="chip" data-op="copy"><i data-lucide="copy"></i> <span data-op-label="copy"></span></div>
+      </div>
+    </div>
+    <div class="sub-row" id="colorRow" style="display:none">
+      <div class="section-label"><span class="dot"></span> <span data-i18n="color.section"></span></div>
+      <div class="chip-row" id="colorChips">
+        <div class="chip" data-color="black"><i data-lucide="circle"></i> <span data-val-label="black"></span></div>
+        <div class="chip" data-color="color"><i data-lucide="palette"></i> <span data-val-label="color"></span></div>
+      </div>
+    </div>
+    <div class="sub-row" id="faceRow" style="display:none">
+      <div class="section-label"><span class="dot"></span> <span data-i18n="face.section"></span></div>
+      <div class="chip-row" id="faceChips">
+        <div class="chip" data-face="one"><i data-lucide="file"></i> <span data-val-label="one"></span></div>
+        <div class="chip" data-face="two"><i data-lucide="files"></i> <span data-val-label="two"></span></div>
+      </div>
+    </div>
+    <div class="sub-row" id="finishRow" style="display:none">
+      <div class="section-label"><span class="dot"></span> <span data-i18n="finish.section"></span></div>
+      <div class="chip-row" id="finishChips">
+        <div class="chip" data-finish="normal"><i data-lucide="check"></i> <span data-val-label="normal"></span></div>
+        <div class="chip" data-finish="glossy"><i data-lucide="sparkles"></i> <span data-val-label="glossy"></span></div>
+      </div>
+    </div>
+    <div class="eng-fields" id="engFields">
+      <div class="eng-title"><i data-lucide="ruler"></i> <span data-i18n="eng.title"></span></div>
+      <div class="chip-row" id="engPriceChips" style="margin-bottom:10px">
+        <div class="chip sel" data-engpm="meter"><i data-lucide="ruler"></i> <span data-i18n="eng.perMeter"></span></div>
+        <div class="chip" data-engpm="item"><i data-lucide="file"></i> <span data-i18n="eng.perItem"></span></div>
+      </div>
+      <div class="eng-row">
+        <div class="field"><label data-i18n="eng.length"></label><input type="number" id="engLength" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+        <div class="field"><label data-i18n="eng.note"></label><input type="text" id="engNote" data-i18n-ph="eng.notePh"></div>
+      </div>
+    </div>
+    <div class="add-row" id="subAddRow">
+      <div class="mini-field" id="subQtyWrap"><label data-i18n="qty"></label><input type="number" id="subQty" min="0" inputmode="numeric" placeholder="1"></div>
+      <div class="mini-field"><label id="subPriceLabel"></label><input type="number" id="subPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <button class="btn-add-item" id="btnAddSub" disabled data-i18n="add"></button>
+      <button class="btn-cancel-item" id="btnCancelSub" data-i18n="cancel"></button>
+    </div>
+  </div>
+
+  <!-- Simple service -->
+  <div class="sub-panel" id="simplePanel">
+    <div class="add-row" style="grid-template-columns:1fr 80px 1fr auto auto">
+      <div class="mini-field" id="descPickWrap" style="display:none"><label data-i18n="desc"></label><select id="simpleDescSel"></select></div>
+      <div class="mini-field" id="descNewWrap"><label data-i18n="desc"></label><input type="text" id="simpleDesc" data-i18n-ph="descPh"></div>
+      <div class="mini-field"><label data-i18n="qty"></label><input type="number" id="simpleQty" min="0" inputmode="numeric" placeholder="1"></div>
+      <div class="mini-field"><label id="simplePriceLabel"></label><input type="number" id="simplePrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <button class="btn-add-item" id="btnAddSimple" disabled data-i18n="add"></button>
+      <button class="btn-cancel-item" id="btnCancelSimple" data-i18n="cancel"></button>
+    </div>
+  </div>
+
+  <!-- Custom service -->
+  <div class="custom-svc" id="customSvc">
+    <div class="custom-svc-header"><i data-lucide="pencil"></i> <span data-i18n="custom.header"></span></div>
+    <div class="custom-svc-body">
+      <div class="add-row" style="grid-template-columns:1fr 80px 1fr auto">
+        <div class="mini-field"><label data-i18n="custom.name"></label><input type="text" id="customName" data-i18n-ph="custom.ph"></div>
+        <div class="mini-field"><label data-i18n="qty"></label><input type="number" id="customQty" min="0" inputmode="numeric" placeholder="1"></div>
+        <div class="mini-field"><label id="customPriceLabel"></label><input type="number" id="customPrice" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+        <button class="btn-add-item" id="btnAddCustom" disabled data-i18n="add"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice -->
+  <div class="invoice-mini">
+    <div class="invoice-mini-head">
+      <h3><i data-lucide="receipt"></i> <span data-i18n="inv.title"></span></h3>
+      <button class="btn-clear-inv" id="btnClearInv" data-i18n="inv.clear"></button>
+    </div>
+    <div class="invoice-mini-body" id="invoiceBody"></div>
+    <div class="inv-total-bar">
+      <span class="lbl" data-i18n="inv.total"></span>
+      <span class="val" id="invTotal">0.00</span>
+    </div>
+  </div>
+
+  <button class="btn-save-transaction" id="btnSaveTx" disabled><i data-lucide="save"></i> <span data-i18n="save.tx"></span></button>
+</div>
+</div>
+
+<!-- PAGE: HISTORY -->
+<div class="page" id="pageHistory">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="history"></i></span> <span data-i18n="hist.title"></span></div>
+  </div>
+  <div class="history-top">
+    <input type="text" class="search-box" id="searchHistory" data-i18n-ph="hist.search">
+  </div>
+  <div class="history-filters" id="historyFilters">
+    <div class="filter-chip active" data-filter="all" data-i18n="filter.all"></div>
+    <div class="filter-chip" data-filter="today" data-i18n="filter.today"></div>
+    <div class="filter-chip" data-filter="week" data-i18n="filter.week"></div>
+    <div class="filter-chip" data-filter="month" data-i18n="filter.month"></div>
+  </div>
+  <div class="period-total-bar" id="periodTotalBar">
+    <span class="lbl" data-i18n="hist.periodTotal"></span>
+    <span class="val" id="periodTotalVal"></span>
+  </div>
+  <div id="historyList"></div>
+</div>
+</div>
+
+<!-- PAGE: MACHINES -->
+<div class="page" id="pageMachines">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="settings-2"></i></span> <span data-i18n="mach.title"></span></div>
+  </div>
+  <div id="machinesList"></div>
+</div>
+</div>
+
+<!-- PAGE: OPERATIONAL COSTS -->
+<div class="page" id="pageExpenses">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="wallet"></i></span> <span data-i18n="oc.title"></span></div>
+    <div class="section-label" style="margin-top:4px"><span class="dot"></span> <span data-i18n="oc.type"></span></div>
+    <div class="chip-row" id="expTypeChips">
+      <div class="chip" data-exp="repair"><i data-lucide="wrench"></i> <span data-exp-label="repair"></span></div>
+      <div class="chip" data-exp="internet"><i data-lucide="wifi"></i> <span data-exp-label="internet"></span></div>
+      <div class="chip" data-exp="electricity"><i data-lucide="zap"></i> <span data-exp-label="electricity"></span></div>
+      <div class="chip" data-exp="salaries"><i data-lucide="users"></i> <span data-exp-label="salaries"></span></div>
+      <div class="chip" data-exp="inventory"><i data-lucide="package"></i> <span data-exp-label="inventory"></span></div>
+      <div class="chip" data-exp="other"><i data-lucide="pencil"></i> <span data-exp-label="other"></span></div>
+    </div>
+    <div class="field" id="expOtherField" style="display:none;margin-top:10px">
+      <label data-i18n="oc.otherType"></label>
+      <input type="text" id="expOtherName" data-i18n-ph="oc.otherPh">
+    </div>
+    <div class="form-row" style="margin-top:10px">
+      <div class="field"><label data-i18n="oc.amount"></label><input type="number" id="expAmount" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label data-i18n="oc.date"></label><input type="date" id="expDate"></div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label data-i18n="oc.note"></label>
+      <textarea id="expNote" data-i18n-ph="oc.notePh"></textarea>
+    </div>
+    <button class="btn-save-transaction" id="btnSaveExp" disabled><i data-lucide="save"></i> <span data-i18n="oc.save"></span></button>
+  </div>
+
+  <div class="history-filters" id="expFilters">
+    <div class="filter-chip active" data-filter="all" data-i18n="filter.all"></div>
+    <div class="filter-chip" data-filter="today" data-i18n="filter.today"></div>
+    <div class="filter-chip" data-filter="week" data-i18n="filter.week"></div>
+    <div class="filter-chip" data-filter="month" data-i18n="filter.month"></div>
+  </div>
+  <div class="period-total-bar visible" id="expTotalBar">
+    <span class="lbl" data-i18n="oc.periodTotal"></span>
+    <span class="val" id="expTotalVal" style="color:var(--orange)"></span>
+  </div>
+  <div id="expensesList"></div>
+</div>
+</div>
+
+<!-- PAGE: UNPAID / RECEIVABLES -->
+<div class="page" id="pageUnpaid">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="clock"></i></span> <span data-i18n="unpaid.title"></span></div>
+  </div>
+  <div class="period-total-bar visible">
+    <span class="lbl" data-i18n="unpaid.total"></span>
+    <span class="val" id="unpaidTotalVal" style="color:var(--red)"></span>
+  </div>
+  <div id="unpaidList"></div>
+</div>
+</div>
+
+<!-- PAGE: DASHBOARD (admin) -->
+<div class="page" id="pageDashboard">
+<div class="page-pad">
+  <div class="page-header-card">
+    <div class="page-title"><span class="title-icon"><i data-lucide="bar-chart-2"></i></span> <span data-i18n="dash.title"></span></div>
+  </div>
+  <div class="dash-stats">
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="clipboard-list"></i></div><div class="ds-label" data-i18n="dash.tx"></div><div class="ds-value" id="dTotalTx">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="banknote"></i></div><div class="ds-label" data-i18n="dash.rev"></div><div class="ds-value" id="dTotalRev">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="file-text"></i></div><div class="ds-label" data-i18n="dash.pieces"></div><div class="ds-value" id="dTotalPieces">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="users"></i></div><div class="ds-label" data-i18n="dash.clients"></div><div class="ds-value" id="dTotalClients">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="sun"></i></div><div class="ds-label" data-i18n="dash.today"></div><div class="ds-value" id="dTodayRev">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="calendar"></i></div><div class="ds-label" data-i18n="dash.month"></div><div class="ds-value" id="dMonthRev">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="wallet"></i></div><div class="ds-label" data-i18n="dash.costs"></div><div class="ds-value" id="dTotalCosts" style="color:var(--orange)">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="trending-down"></i></div><div class="ds-label" data-i18n="dash.monthCosts"></div><div class="ds-value" id="dMonthCosts" style="color:var(--orange)">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="coins"></i></div><div class="ds-label" data-i18n="dash.net"></div><div class="ds-value" id="dMonthNet">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="activity"></i></div><div class="ds-label" data-i18n="dash.avgTx"></div><div class="ds-value" id="dAvgTx">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="check-circle"></i></div><div class="ds-label" data-i18n="dash.collected"></div><div class="ds-value" id="dCollected" style="color:var(--green)">0</div></div>
+    <div class="dash-stat"><div class="ds-icon"><i data-lucide="clock"></i></div><div class="ds-label" data-i18n="dash.outstanding"></div><div class="ds-value" id="dOutstanding" style="color:var(--red)">0</div></div>
+  </div>
+  <div class="dash-section">
+    <h3><i data-lucide="calendar"></i> <span data-i18n="dash.dayReport"></span></h3>
+    <div class="pw-row" style="margin-bottom:10px"><div class="field" style="max-width:220px"><label data-i18n="dash.pickDay"></label><input type="date" id="dashDay"></div></div>
+    <div class="dash-stats" id="dayStats" style="margin-bottom:12px"></div>
+    <div class="section-label" style="margin:6px 0"><span class="dot"></span> <span data-i18n="dash.dayByPay"></span></div>
+    <div id="dashDayPay"></div>
+  </div>
+  <div class="dash-section"><h3><i data-lucide="credit-card"></i> <span data-i18n="dash.byPayMonth"></span></h3><div id="dashPayMonth"></div></div>
+  <div class="dash-section"><h3><i data-lucide="trending-up"></i> <span data-i18n="dash.topSvc"></span></h3><div id="dashServices"></div></div>
+  <div class="dash-section"><h3><i data-lucide="package"></i> <span data-i18n="dash.topPaper"></span></h3><div id="dashPapers"></div></div>
+  <div class="dash-section"><h3><i data-lucide="calendar-days"></i> <span data-i18n="dash.last7"></span></h3><div id="dashLast7"></div></div>
+  <div class="dash-section"><h3><i data-lucide="calendar-days"></i> <span data-i18n="dash.byMonth"></span></h3><div id="dashByMonth"></div></div>
+  <div class="dash-section"><h3><i data-lucide="wallet"></i> <span data-i18n="dash.costsByType"></span></h3><div id="dashCostTypes"></div></div>
+  <div class="dash-section">
+    <h3><i data-lucide="ruler"></i> <span data-i18n="dash.eng"></span></h3>
+    <div id="dashEng" style="font-size:1.5rem;font-weight:900;color:var(--teal);text-align:center;padding:8px">0.00</div>
+  </div>
+</div>
+</div>
+
+<!-- PAGE: SETTINGS (admin) -->
+<div class="page" id="pageSettings">
+<div class="page-pad set-grid">
+  <div class="page-header-card" style="margin-bottom:0">
+    <div class="page-title"><span class="title-icon"><i data-lucide="sliders"></i></span> <span data-i18n="set.title"></span></div>
+  </div>
+
+  <div class="card">
+    <h3><i data-lucide="download"></i> <span data-i18n="exp.title"></span></h3>
+    <div class="quick-chips" id="expQuick">
+      <div class="filter-chip" data-range="today" data-i18n="filter.today"></div>
+      <div class="filter-chip active" data-range="month" data-i18n="filter.month"></div>
+      <div class="filter-chip" data-range="all" data-i18n="filter.all"></div>
+    </div>
+    <div class="pw-row">
+      <div class="field"><label data-i18n="exp.from"></label><input type="date" id="expFrom"></div>
+      <div class="field"><label data-i18n="exp.to"></label><input type="date" id="expTo"></div>
+    </div>
+    <div class="pw-row" style="margin-top:10px">
+      <button class="btn-primary" id="btnExportXlsx"><i data-lucide="download"></i> <span data-i18n="exp.btn"></span></button>
+      <button class="btn-secondary" id="btnExportCsv"><i data-lucide="file-spreadsheet"></i> <span data-i18n="exp.csvBtn"></span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><i data-lucide="hard-drive"></i> <span data-i18n="backup.title"></span></h3>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px" data-i18n="backup.desc"></p>
+    <div class="pw-row">
+      <button class="btn-secondary" id="btnBackupJson"><i data-lucide="save"></i> <span data-i18n="backup.export"></span></button>
+      <label class="btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:0">
+        <i data-lucide="folder-open"></i> <span data-i18n="backup.import"></span>
+        <input type="file" id="fileRestoreJson" accept=".json" style="display:none">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><i data-lucide="lock"></i> <span data-i18n="pw.title"></span></h3>
+    <div class="pw-row" style="margin-bottom:14px">
+      <div class="field"><label data-i18n="pw.emp"></label><input type="password" id="newEmpPw" placeholder="••••"></div>
+      <button class="btn-secondary" id="btnChangeEmpPw" data-i18n="pw.change"></button>
+    </div>
+    <div class="pw-row">
+      <div class="field"><label data-i18n="pw.current"></label><input type="password" id="curAdminPw" placeholder="••••"></div>
+      <div class="field"><label data-i18n="pw.admin"></label><input type="password" id="newAdminPw" placeholder="••••"></div>
+      <button class="btn-secondary" id="btnChangeAdminPw" data-i18n="pw.change"></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><i data-lucide="settings"></i> <span data-i18n="machset.title"></span></h3>
+    <div id="machSetList"></div>
+    <button class="btn-secondary" id="btnAddMachine" data-i18n="machset.add" style="margin-top:8px"></button>
+  </div>
+</div>
+</div>
+
+</div><!-- /main-content -->
+
+<!-- NAV -->
+<div class="nav-bar" id="navBar">
+  <button class="nav-item active" data-page="pageNew"><span class="nav-icon"><i data-lucide="plus"></i></span><span class="nav-label" data-i18n="nav.new"></span></button>
+  <button class="nav-item" data-page="pageHistory"><span class="nav-icon"><i data-lucide="history"></i></span><span class="nav-label" data-i18n="nav.history"></span></button>
+  <button class="nav-item" data-page="pageMachines"><span class="nav-icon"><i data-lucide="settings-2"></i></span><span class="nav-label" data-i18n="nav.machines"></span></button>
+  <button class="nav-item" data-page="pageExpenses"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label" data-i18n="nav.expenses"></span></button>
+  <button class="nav-item" data-page="pageUnpaid"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label" data-i18n="nav.unpaid"></span></button>
+  <button class="nav-item admin-only" data-page="pageDashboard"><span class="nav-icon"><i data-lucide="bar-chart-2"></i></span><span class="nav-label" data-i18n="nav.dashboard"></span></button>
+  <button class="nav-item admin-only" data-page="pageSettings"><span class="nav-icon"><i data-lucide="sliders"></i></span><span class="nav-label" data-i18n="nav.settings"></span></button>
+</div>
+</div><!-- /appView -->
+
+<!-- CONFIRM MODAL -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal">
+    <div class="modal-icon" id="confirmIcon"><i data-lucide="trash-2"></i></div>
+    <h3 id="confirmTitle"></h3>
+    <div class="modal-sub" id="confirmSub"></div>
+    <div class="modal-actions">
+      <button class="btn-modal secondary" id="confirmNo"></button>
+      <button class="btn-modal danger" id="confirmYes"></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/app.js?v=12"></script>
+</body>
+</html>
