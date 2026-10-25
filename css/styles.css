@@ -207,10 +207,13 @@ html.dark .icon-btn .icon-light{display:none}
 .btn-add-item:disabled{opacity:.4;cursor:not-allowed}
 .btn-cancel-item{border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-muted);font-weight:800;font-size:.9rem;padding:10px 16px;height:42px;white-space:nowrap;transition:border-color .15s, color .15s}
 .btn-cancel-item:hover{border-color:var(--red);color:var(--red)}
+.add-row.no-qty{grid-template-columns:1fr auto auto}
+#descNewWrap.below{grid-column:1/-1;order:10}
 @media (max-width:560px){
   .add-row{grid-template-columns:1fr 1fr !important}
   #simplePanel .mini-field:first-child,#customSvc .mini-field:first-child{grid-column:1/-1}
   #customSvc .btn-add-item{grid-column:1/-1}
+  #subAddRow.no-qty .mini-field{grid-column:1/-1}
 }
 
 /* ===== CUSTOM SERVICE ===== */

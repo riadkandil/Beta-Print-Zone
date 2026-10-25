@@ -28,7 +28,7 @@ const FIREBASE_CONFIG = {
 
 /* Default passwords (hashes are created on first run; change them from
    Admin → Settings). Employee: 1234 — Admin: mkmass45 */
-const APP_VERSION = 'v1.11';
+const APP_VERSION = 'v1.12';
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
 
@@ -149,12 +149,12 @@ const I18N = {
     'unpaid.confirmSub': 'It will be recorded as paid (cash) and removed from this list.', 'unpaid.confirmBtn': 'Paid',
     'toast.paid': 'Marked as paid ✓',
     'price.mode': 'Price mode', 'price.perItem': 'Per item', 'price.final': 'Final price',
-    'price.unit': 'Price (per item)', 'price.total': 'Total price',
+    'price.unit': 'Price (per item)', 'price.total': 'Total price', 'price.job': 'Price',
     'svc.section': 'Service type', 'op.section': 'Operation', 'color.section': 'Color',
     'face.section': 'Sides', 'finish.section': 'Finish',
     'eng.title': 'Engineering details', 'eng.length': 'Length (meters)', 'eng.note': 'Note (optional)',
     'eng.notePh': 'e.g. floor plan...', 'eng.m': 'm',
-    'eng.perMeter': 'Price per meter', 'eng.perItem': 'Price per item', 'price.meter': 'Price (per meter)',
+    'eng.perMeter': 'Price per meter', 'eng.perItem': 'Fixed price', 'price.meter': 'Price (per meter)',
     'qty': 'Quantity', 'desc': 'Description', 'descPh': 'Service details',
     'add': '+ Add', 'cancel': 'Cancel',
     'custom.header': 'Unlisted service', 'custom.name': 'Service name', 'custom.ph': 'Type the service',
@@ -252,12 +252,12 @@ const I18N = {
     'unpaid.confirmSub': 'ستُسجل كمدفوعة (نقداً) وتُزال من هذه القائمة.', 'unpaid.confirmBtn': 'مدفوع',
     'toast.paid': 'تم تسجيل الدفع ✓',
     'price.mode': 'وضع السعر', 'price.perItem': 'لكل قطعة', 'price.final': 'سعر نهائي',
-    'price.unit': 'السعر (لكل قطعة)', 'price.total': 'السعر الإجمالي',
+    'price.unit': 'السعر (لكل قطعة)', 'price.total': 'السعر الإجمالي', 'price.job': 'السعر',
     'svc.section': 'نوع الخدمة', 'op.section': 'العملية', 'color.section': 'اللون',
     'face.section': 'الوجوه', 'finish.section': 'الإنهاء',
     'eng.title': 'بيانات الهندسي', 'eng.length': 'الطول (متر)', 'eng.note': 'ملاحظة (اختياري)',
     'eng.notePh': 'مثلاً: مخطط أرضي...', 'eng.m': 'متر',
-    'eng.perMeter': 'سعر المتر', 'eng.perItem': 'سعر القطعة', 'price.meter': 'السعر (للمتر)',
+    'eng.perMeter': 'سعر المتر', 'eng.perItem': 'سعر ثابت', 'price.meter': 'السعر (للمتر)',
     'qty': 'الكمية', 'desc': 'الوصف', 'descPh': 'تفصيل الخدمة',
     'add': '+ إضافة', 'cancel': 'إلغاء',
     'custom.header': 'خدمة غير مدرجة', 'custom.name': 'اسم الخدمة', 'custom.ph': 'اكتب الخدمة',
@@ -712,9 +712,22 @@ $('confirmOverlay').addEventListener('click', e => { if (e.target === $('confirm
 const PAPER_TYPES = ['A4', 'A3', 'A5', 'eng'];
 const SIMPLE_TYPES = ['books', 'office', 'pads', 'wrap', 'upload'];
 
+/* Scans and engineering are recorded without a quantity */
+function isQtyless() { return state.selSvc === 'eng' || state.selOp === 'scan'; }
+/* An empty quantity means 1 (the placeholder shows 1); 0 or garbage is invalid */
+function readQty(el) {
+  const v = el.value.trim();
+  if (!v) return 1;
+  const n = parseInt(v);
+  return n > 0 ? n : 0;
+}
+
 function updatePriceModeLabels() {
   const txt = state.isFinalPrice ? t('price.total') : t('price.unit');
-  $('subPriceLabel').textContent = (!state.isFinalPrice && state.selSvc === 'eng' && state.engPerMeter) ? t('price.meter') : txt;
+  let subTxt = txt;
+  if (!state.isFinalPrice && state.selSvc === 'eng' && state.engPerMeter) subTxt = t('price.meter');
+  else if (isQtyless()) subTxt = state.isFinalPrice ? t('price.total') : t('price.job');
+  $('subPriceLabel').textContent = subTxt;
   $('simplePriceLabel').textContent = txt;
   $('customPriceLabel').textContent = txt;
 }
@@ -723,6 +736,86 @@ function updatePriceMode(final) {
   $('btnFinalPrice').classList.toggle('active', final);
   $('btnPerItem').classList.toggle('active', !final);
   updatePriceModeLabels();
+  prefillSubPrice();
+  prefillSimplePrice();
+  updateSubBtn();
+  updateSimpleBtn();
+  updateCustomBtn();
+}
+
+/* ==================== PRICE MEMORY ==================== */
+/* Suggests the last unit price used for the same service/options, newest first */
+function paperPriceKey(it) {
+  return [it.svc, it.op, it.color, it.face, it.finish, it.svc === 'eng' ? (it.engPerMeter ? 'm' : 'f') : ''].join('|');
+}
+function simplePriceKey(svc, desc) { return 's|' + svc + '|' + (desc || ''); }
+function itemPriceKey(it) {
+  if (it.type === 'paper') return paperPriceKey(it);
+  if (it.type === 'simple') return simplePriceKey(it.svc, it.desc);
+  return null;
+}
+/* needJobPrice: older scan records stored a per-page price, so only reuse prices recorded without a quantity */
+function lastPriceFor(key, needJobPrice) {
+  const ok = it => !it.isFinal && itemPriceKey(it) === key && (!needJobPrice || it.noQty);
+  for (let i = state.invoice.length - 1; i >= 0; i--) if (ok(state.invoice[i])) return state.invoice[i].price;
+  for (const tx of state.transactions) {
+    if (tx.mistake) continue;
+    const hit = (tx.items || []).find(ok);
+    if (hit) return hit.price;
+  }
+  return null;
+}
+function currentPaperKey() {
+  return paperPriceKey({ svc: state.selSvc, op: state.selOp, color: state.selColor || '—', face: state.selFace || '—', finish: state.selFinish || '—', engPerMeter: state.selSvc === 'eng' && state.engPerMeter });
+}
+let subPriceAuto = false, simplePriceAuto = false;
+function prefillSubPrice() {
+  const el = $('subPrice');
+  if (el.value && !subPriceAuto) return;
+  const ready = state.selSvc && state.selOp && (state.selOp === 'scan' || (state.selColor && state.selFace && state.selFinish));
+  const needJob = isQtyless() && !(state.selSvc === 'eng' && state.engPerMeter);
+  const p = (ready && !state.isFinalPrice) ? lastPriceFor(currentPaperKey(), needJob) : null;
+  el.value = p != null ? p : '';
+  subPriceAuto = p != null;
+}
+function prefillSimplePrice() {
+  if (!state.selSvc || !SIMPLE_TYPES.includes(state.selSvc)) return;
+  const el = $('simplePrice');
+  if (el.value && !simplePriceAuto) return;
+  let desc = $('simpleDesc').value.trim();
+  if (state.selSvc === 'books' || state.selSvc === 'office') {
+    const v = $('simpleDescSel').value;
+    desc = (v && v !== '__new__') ? v : null;
+  }
+  const p = (desc != null && !state.isFinalPrice) ? lastPriceFor(simplePriceKey(state.selSvc, desc)) : null;
+  el.value = p != null ? p : '';
+  simplePriceAuto = p != null;
+}
+
+/* ==================== FAST ENTRY ==================== */
+const finePointer = !!(window.matchMedia && matchMedia('(pointer:fine)').matches);
+function focusField(el) { if (!el) return; el.focus(); if (el.select) el.select(); }
+/* Enter adds the item when it is complete, otherwise jumps to the next empty field */
+function addOnEnter(ids, btnId) {
+  ids.forEach(id => $(id).addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault();
+    if (!$(btnId).disabled) { $(btnId).click(); return; }
+    const next = ids.map(x => $(x)).find(el => el !== e.target && el.offsetParent !== null && !el.value);
+    if (next) focusField(next);
+  }));
+}
+function focusNextSubField() {
+  if (!state.selOp) return;
+  if (!finePointer && state.selOp !== 'scan') return; // on touch screens the keyboard would hide the option chips
+  const perMeter = state.engPerMeter && !state.isFinalPrice;
+  if (state.selSvc === 'eng' && !(parseFloat($('engLength').value) > 0) && (state.selOp !== 'scan' || perMeter)) { focusField($('engLength')); return; }
+  focusField(isQtyless() ? $('subPrice') : $('subQty'));
+}
+function updateQtyVisibility() {
+  const hide = isQtyless();
+  $('subQtyWrap').style.display = hide ? 'none' : '';
+  $('subAddRow').classList.toggle('no-qty', hide);
 }
 $('btnPerItem').addEventListener('click', () => updatePriceMode(false));
 $('btnFinalPrice').addEventListener('click', () => updatePriceMode(true));
@@ -753,13 +846,15 @@ $('serviceGrid').addEventListener('click', e => {
   state.selOp = null; state.selColor = null; state.selFace = null; state.selFinish = null;
 
   document.querySelectorAll('#subPanel .chip').forEach(c => c.classList.remove('sel', 'sel-green', 'sel-orange'));
-  $('subQty').value = ''; $('subPrice').value = '';
+  $('engPriceChips').querySelectorAll('.chip').forEach(c => c.classList.toggle('sel', (c.dataset.engpm === 'meter') === state.engPerMeter));
+  $('subQty').value = ''; $('subPrice').value = ''; subPriceAuto = false;
   $('engLength').value = ''; $('engNote').value = '';
 
   if (PAPER_TYPES.includes(state.selSvc)) {
     $('subPanel').classList.add('visible');
     $('simplePanel').classList.remove('visible');
     $('engFields').classList.toggle('visible', state.selSvc === 'eng');
+    updateQtyVisibility();
     updatePriceModeLabels();
     $('colorRow').style.display = 'none';
     $('faceRow').style.display = 'none';
@@ -768,9 +863,11 @@ $('serviceGrid').addEventListener('click', e => {
   } else {
     $('subPanel').classList.remove('visible');
     $('simplePanel').classList.add('visible');
-    $('simpleDesc').value = ''; $('simpleQty').value = ''; $('simplePrice').value = '';
+    $('simpleDesc').value = ''; $('simpleQty').value = ''; $('simplePrice').value = ''; simplePriceAuto = false;
     setupDescPicker();
+    prefillSimplePrice();
     updateSimpleBtn();
+    if (finePointer) focusField((state.selSvc === 'books' || state.selSvc === 'office') ? $('simpleDescSel') : $('simpleDesc'));
   }
 });
 
@@ -795,7 +892,11 @@ $('opChips').addEventListener('click', e => {
     $('faceChips').querySelectorAll('.chip').forEach(c => c.classList.toggle('sel-green', c.dataset.face === 'one'));
     $('finishChips').querySelectorAll('.chip').forEach(c => c.classList.toggle('sel-green', c.dataset.finish === 'normal'));
   }
+  updateQtyVisibility();
+  updatePriceModeLabels();
+  prefillSubPrice();
   updateSubBtn();
+  focusNextSubField();
 });
 
 $('colorChips').addEventListener('click', e => {
@@ -803,6 +904,7 @@ $('colorChips').addEventListener('click', e => {
   $('colorChips').querySelectorAll('.chip').forEach(c => c.classList.remove('sel', 'sel-orange'));
   chip.classList.add('sel-orange');
   state.selColor = chip.dataset.color;
+  prefillSubPrice();
   updateSubBtn();
 });
 
@@ -811,6 +913,7 @@ $('faceChips').addEventListener('click', e => {
   $('faceChips').querySelectorAll('.chip').forEach(c => c.classList.remove('sel', 'sel-green'));
   chip.classList.add('sel-green');
   state.selFace = chip.dataset.face;
+  prefillSubPrice();
   updateSubBtn();
 });
 
@@ -819,6 +922,7 @@ $('finishChips').addEventListener('click', e => {
   $('finishChips').querySelectorAll('.chip').forEach(c => c.classList.remove('sel', 'sel-green'));
   chip.classList.add('sel-green');
   state.selFinish = chip.dataset.finish;
+  prefillSubPrice();
   updateSubBtn();
 });
 
@@ -828,42 +932,53 @@ $('engPriceChips').addEventListener('click', e => {
   chip.classList.add('sel');
   state.engPerMeter = chip.dataset.engpm === 'meter';
   updatePriceModeLabels();
+  prefillSubPrice();
+  updateSubBtn();
 });
 
 $('subQty').addEventListener('input', updateSubBtn);
-$('subPrice').addEventListener('input', updateSubBtn);
+$('subPrice').addEventListener('input', () => { subPriceAuto = false; updateSubBtn(); });
 $('engLength').addEventListener('input', updateSubBtn);
+addOnEnter(['engLength', 'subQty', 'subPrice', 'engNote'], 'btnAddSub');
 
 function updateSubBtn() {
-  const q = parseInt($('subQty').value) || 0;
+  const q = isQtyless() ? 1 : readQty($('subQty'));
   const p = parseFloat($('subPrice').value) || 0;
-  const engOk = state.selSvc !== 'eng' || state.selOp === 'scan' || (parseFloat($('engLength').value) > 0);
+  const len = parseFloat($('engLength').value) || 0;
+  const perMeter = state.engPerMeter && !state.isFinalPrice;
+  // a scan priced per meter still needs the length, otherwise its total would be 0
+  const engOk = state.selSvc !== 'eng' || len > 0 || (state.selOp === 'scan' && !perMeter);
   const optsOk = !state.selOp || state.selOp === 'scan' || (state.selColor && state.selFace && state.selFinish);
   $('btnAddSub').disabled = !(state.selOp && q > 0 && p > 0 && engOk && optsOk);
 }
 
 function resetSubPanel() {
   state.selOp = null; state.selColor = null; state.selFace = null; state.selFinish = null;
-  document.querySelectorAll('#subPanel .chip').forEach(c => c.classList.remove('sel', 'sel-orange', 'sel-green'));
+  $('opChips').querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
+  document.querySelectorAll('#colorChips .chip, #faceChips .chip, #finishChips .chip').forEach(c => c.classList.remove('sel', 'sel-orange', 'sel-green'));
   $('colorRow').style.display = 'none';
   $('faceRow').style.display = 'none';
   $('finishRow').style.display = 'none';
-  $('subQty').value = ''; $('subPrice').value = '';
+  $('subQty').value = ''; $('subPrice').value = ''; subPriceAuto = false;
   $('engLength').value = ''; $('engNote').value = '';
+  updateQtyVisibility();
+  updatePriceModeLabels();
   updateSubBtn();
 }
 
 $('btnAddSub').addEventListener('click', () => {
-  const q = parseInt($('subQty').value) || 0;
+  const noQty = isQtyless();
+  const q = noQty ? 1 : readQty($('subQty'));
   const p = parseFloat($('subPrice').value) || 0;
   const engLength = state.selSvc === 'eng' ? (parseFloat($('engLength').value) || 0) : null;
   const engNote = state.selSvc === 'eng' ? $('engNote').value.trim() : null;
+  const perMeter = state.selSvc === 'eng' && state.engPerMeter && !state.isFinalPrice;
   state.invoice.push({
     id: Date.now() + Math.random(), svc: state.selSvc, op: state.selOp,
     color: state.selColor || '—', face: state.selFace || '—', finish: state.selFinish || '—',
     desc: null, qty: q, price: p,
-    total: state.isFinalPrice ? p : (state.selSvc === 'eng' && state.engPerMeter ? q * p * (engLength || 0) : q * p),
-    engLength, engNote, engPerMeter: state.selSvc === 'eng' && state.engPerMeter && !state.isFinalPrice,
+    total: state.isFinalPrice ? p : (perMeter ? q * p * (engLength || 0) : q * p),
+    engLength, engNote, engPerMeter: perMeter, noQty,
     type: 'paper', isFinal: state.isFinalPrice
   });
   renderInvoice();
@@ -880,12 +995,15 @@ $('btnCancelSub').addEventListener('click', () => {
 
 /* ==================== SIMPLE SERVICE ==================== */
 $('simpleQty').addEventListener('input', updateSimpleBtn);
-$('simplePrice').addEventListener('input', updateSimpleBtn);
-$('simpleDesc').addEventListener('input', updateSimpleBtn);
+$('simplePrice').addEventListener('input', () => { simplePriceAuto = false; updateSimpleBtn(); });
+$('simpleDesc').addEventListener('input', () => { prefillSimplePrice(); updateSimpleBtn(); });
+addOnEnter(['simpleDesc', 'simpleQty', 'simplePrice'], 'btnAddSimple');
 function setupDescPicker() {
   const hasCatalog = state.selSvc === 'books' || state.selSvc === 'office';
   $('descPickWrap').style.display = hasCatalog ? '' : 'none';
   $('descNewWrap').style.display = hasCatalog ? 'none' : '';
+  // with a catalog, the "new product" field opens on its own row under the picker
+  $('descNewWrap').classList.toggle('below', hasCatalog);
   if (!hasCatalog) return;
   const items = (state.catalog && state.catalog[state.selSvc]) || [];
   $('simpleDescSel').innerHTML = `<option value="">${t('desc.choose')}</option>` +
@@ -897,10 +1015,12 @@ $('simpleDescSel').addEventListener('change', () => {
   const isNew = $('simpleDescSel').value === '__new__';
   $('descNewWrap').style.display = isNew ? '' : 'none';
   if (isNew) { $('simpleDesc').value = ''; $('simpleDesc').focus(); }
+  prefillSimplePrice();
   updateSimpleBtn();
+  if (!isNew && $('simpleDescSel').value && finePointer) focusField($('simpleQty'));
 });
 function updateSimpleBtn() {
-  const q = parseInt($('simpleQty').value) || 0;
+  const q = readQty($('simpleQty'));
   const p = parseFloat($('simplePrice').value) || 0;
   let descOk = true;
   if (state.selSvc === 'books' || state.selSvc === 'office') {
@@ -910,7 +1030,7 @@ function updateSimpleBtn() {
   $('btnAddSimple').disabled = !(q > 0 && p > 0 && descOk);
 }
 $('btnAddSimple').addEventListener('click', () => {
-  const q = parseInt($('simpleQty').value) || 0;
+  const q = readQty($('simpleQty'));
   const p = parseFloat($('simplePrice').value) || 0;
   let d = $('simpleDesc').value.trim() || null;
   if (state.selSvc === 'books' || state.selSvc === 'office') {
@@ -947,14 +1067,15 @@ $('customSvc').addEventListener('click', function (e) {
   if (!this.classList.contains('expanded')) { this.classList.add('expanded'); $('customName').focus(); }
 });
 ['customQty', 'customPrice', 'customName'].forEach(id => $(id).addEventListener('input', updateCustomBtn));
+addOnEnter(['customName', 'customQty', 'customPrice'], 'btnAddCustom');
 function updateCustomBtn() {
-  const q = parseInt($('customQty').value) || 0;
+  const q = readQty($('customQty'));
   const p = parseFloat($('customPrice').value) || 0;
   const n = $('customName').value.trim();
   $('btnAddCustom').disabled = !(n && q > 0 && p > 0);
 }
 $('btnAddCustom').addEventListener('click', () => {
-  const q = parseInt($('customQty').value) || 0;
+  const q = readQty($('customQty'));
   const p = parseFloat($('customPrice').value) || 0;
   const n = $('customName').value.trim();
   state.invoice.push({
@@ -998,11 +1119,11 @@ function renderInvoice() {
       return `<div class="inv-item">
         <div class="inv-item-top">
           <div class="inv-item-info">${tags}</div>
-          <span class="inv-item-qty">×${it.qty}</span>
+          ${it.noQty ? '' : `<span class="inv-item-qty">×${it.qty}</span>`}
           <span class="inv-item-total">${it.total.toFixed(2)}</span>
           <button class="btn-del-item" data-id="${it.id}">✕</button>
         </div>
-        ${hasEng ? `<div class="inv-item-eng"><span><i data-lucide="ruler"></i> ${it.engLength} ${t('eng.m')}${it.engPerMeter ? ' × ' + it.qty + ' × ' + it.price + '/' + t('eng.m') : ''}</span>${it.engNote ? `<span style="color:var(--text-muted)">— ${escapeHtml(it.engNote)}</span>` : ''}</div>` : ''}
+        ${hasEng ? `<div class="inv-item-eng"><span><i data-lucide="ruler"></i> ${it.engLength} ${t('eng.m')}${it.engPerMeter ? ' × ' + (it.noQty ? '' : it.qty + ' × ') + it.price + '/' + t('eng.m') : ''}</span>${it.engNote ? `<span style="color:var(--text-muted)">— ${escapeHtml(it.engNote)}</span>` : ''}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -1058,7 +1179,7 @@ $('btnSaveTx').addEventListener('click', async () => {
     payOther: state.selPay === 'other' ? ($('payOtherName').value.trim() || null) : null,
     items: state.invoice.map(({ id, ...rest }) => rest),
     total: state.invoice.reduce((s, it) => s + it.total, 0),
-    pieces: state.invoice.reduce((s, it) => s + it.qty, 0),
+    pieces: state.invoice.reduce((s, it) => s + (it.noQty ? 0 : it.qty), 0),
     engMeters: state.invoice.reduce((s, it) => s + (it.engLength || 0), 0),
     createdAt: new Date().toISOString(),
     createdBy: state.role,
@@ -1090,6 +1211,13 @@ $('btnSaveTx').addEventListener('click', async () => {
     $('btnSaveTx').disabled = false;
   }
 });
+/* Ctrl+Enter saves the transaction (pressed inside an item field it adds that item first) */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey) || !state.role) return;
+  if (!$('pageNew').classList.contains('active') || $('btnSaveTx').disabled) return;
+  e.preventDefault();
+  $('btnSaveTx').click();
+});
 
 /* ==================== HISTORY ==================== */
 $('historyFilters').addEventListener('click', e => {
@@ -1116,13 +1244,17 @@ function getFilteredHistory() {
 function canDeleteTx(tx) {
   return state.role === 'admin';
 }
+function countLabel(tx) {
+  const items = (tx.items || []).length + ' ' + t('hist.items');
+  return tx.pieces ? tx.pieces + ' ' + t('hist.pieces') + ' · ' + items : items;
+}
 
 function renderHistory() {
   if (!$('pageHistory')) return;
   const filtered = getFilteredHistory();
   const list = $('historyList');
   if (state.role === 'admin') {
-    $('periodTotalVal').textContent = fmtMoney(filtered.reduce((s, t2) => s + (t2.total || 0), 0));
+    $('periodTotalVal').textContent = fmtMoney(filtered.filter(t2 => !t2.mistake).reduce((s, t2) => s + (t2.total || 0), 0));
   }
   if (!filtered.length) {
     list.innerHTML = `<div class="empty-big"><div class="empty-icon"><i data-lucide="inbox"></i></div><p>${state.transactions.length ? t('hist.noresults') : t('hist.empty')}</p></div>`;
@@ -1154,7 +1286,7 @@ function renderHistory() {
       <div class="history-card-tags">${tx.payMethod ? `<span class="tag ${tx.payMethod === 'notpaid' ? 'tag-notpaid' : 'tag-finish'}">${escapeHtml(payLabel(tx))}</span>` : ''}${tagSet}</div>
       ${engTotal > 0 ? `<div style="font-size:.72rem;color:var(--teal);margin-bottom:4px;font-weight:700"><i data-lucide="ruler"></i> ${engTotal.toFixed(2)} ${t('eng.m')}</div>` : ''}
       <div class="history-card-bottom">
-        <span class="items-count">${tx.pieces} ${t('hist.pieces')} · ${(tx.items || []).length} ${t('hist.items')}</span>
+        <span class="items-count">${countLabel(tx)}</span>
         <span class="total">${fmtMoney(tx.total || 0)}</span>
       </div>
       ${(mistakeBtn || editBtn || delBtn) ? `<div class="history-card-actions">${mistakeBtn}${editBtn}${delBtn}</div>` : ''}
@@ -1377,7 +1509,7 @@ function renderUnpaid() {
       </div>
       ${tx.notes ? `<div class="notes">${escapeHtml(tx.notes)}</div>` : ''}
       <div class="history-card-bottom">
-        <span class="items-count">${tx.pieces} ${t('hist.pieces')} · ${(tx.items || []).length} ${t('hist.items')}</span>
+        <span class="items-count">${countLabel(tx)}</span>
         <span class="total" style="color:var(--red)">${fmtMoney(tx.total || 0)}</span>
       </div>
       <div class="history-card-actions">
@@ -1406,7 +1538,7 @@ function itemStatKey(it) {
 }
 function renderDashboard() {
   if (state.role !== 'admin') return;
-  const txs = state.transactions;
+  const txs = state.transactions.filter(t2 => !t2.mistake);
   $('dTotalTx').textContent = txs.length.toLocaleString('en');
   $('dTotalRev').textContent = Math.round(txs.reduce((s, t2) => s + (t2.total || 0), 0)).toLocaleString('en');
   $('dTotalPieces').textContent = txs.reduce((s, t2) => s + (t2.pieces || 0), 0).toLocaleString('en');
@@ -1579,7 +1711,7 @@ $('btnExportXlsx').addEventListener('click', () => {
         [t('xh.finish')]: it.finish === '—' ? '' : valLabel(it.finish),
         [t('xh.engLen')]: it.engLength || '',
         [t('xh.engNote')]: it.engNote || '',
-        [t('xh.qty')]: it.qty,
+        [t('xh.qty')]: it.noQty ? '' : it.qty,
         [t('xh.price')]: Number(it.price),
         [t('xh.final')]: it.isFinal ? t('yes') : t('no'),
         [t('xh.total')]: Number(it.total),
@@ -1599,7 +1731,7 @@ $('btnExportXlsx').addEventListener('click', () => {
   txs.forEach(t2 => (t2.items || []).forEach(it => {
     const key = it.type === 'custom' ? (it.desc || '') : svcLabel(it.svc);
     if (!svcAgg[key]) svcAgg[key] = { qty: 0, rev: 0 };
-    svcAgg[key].qty += (it.qty || 0);
+    svcAgg[key].qty += it.noQty ? 0 : (it.qty || 0);
     svcAgg[key].rev += (it.total || 0);
   }));
   const sumRows = [
@@ -1686,7 +1818,7 @@ $('btnExportCsv').addEventListener('click', () => {
         it.face === '—' ? '' : valLabel(it.face),
         it.finish === '—' ? '' : valLabel(it.finish),
         it.engLength || '', it.engNote || '',
-        it.qty, it.price, it.isFinal ? t('yes') : t('no'), it.total
+        it.noQty ? '' : it.qty, it.price, it.isFinal ? t('yes') : t('no'), it.total
       ].map(esc).join(','));
     });
   });
