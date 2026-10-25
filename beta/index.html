@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Print Zone Beta</title>
+<link rel="icon" href="../Logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/lucide@0.378.0/dist/umd/lucide.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="css/beta.css?v=1">
+</head>
+<body>
+
+<!-- ==================== LOADING ==================== -->
+<div id="loadingView" class="loading">
+  <img src="../Logo.png" alt="" class="loading-logo">
+  <div class="loading-name">Print Zone <span class="beta-tag">BETA</span></div>
+  <div class="spinner"></div>
+  <div class="loading-status" id="loadingStatus"></div>
+</div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="loginView" class="login" hidden>
+  <div class="login-card">
+    <div class="login-tools">
+      <button class="icon-btn" id="langLogin" type="button"></button>
+      <button class="icon-btn theme-btn" id="themeLogin" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
+    </div>
+    <img src="../Logo.png" alt="Print Zone" class="login-logo">
+    <h1 class="login-name">Print Zone <span class="beta-tag">BETA</span></h1>
+    <p class="login-tag" data-i18n="app.tag"></p>
+    <div class="role-grid">
+      <button class="role-card" id="roleEmployee" type="button"><i data-lucide="user"></i><strong data-i18n="login.employee"></strong><span data-i18n="login.employeeSub"></span></button>
+      <button class="role-card" id="roleAdmin" type="button"><i data-lucide="shield"></i><strong data-i18n="login.admin"></strong><span data-i18n="login.adminSub"></span></button>
+    </div>
+    <form class="login-pw" id="loginForm" hidden>
+      <label for="loginPw" data-i18n="login.password"></label>
+      <input type="password" id="loginPw" autocomplete="current-password">
+      <div class="login-error" id="loginError" role="alert"></div>
+      <button class="btn btn-primary btn-block" type="submit" data-i18n="login.enter"></button>
+    </form>
+    <div class="login-note" id="loginNote" hidden></div>
+    <div class="login-foot"><a href="../" data-i18n="beta.classic"></a> · <span id="loginVer"></span></div>
+  </div>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div id="appView" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../Logo.png" alt="" class="brand-logo">
+      <span class="brand-name">Print Zone</span>
+      <span class="beta-tag">BETA</span>
+      <span class="role-pill" id="rolePill"></span>
+    </div>
+    <div class="top-tools">
+      <span class="conn" id="connPill"><span class="dot"></span><span id="connTxt"></span></span>
+      <a class="icon-btn" href="../" id="classicLink" data-i18n-title="beta.classic"><i data-lucide="external-link"></i></a>
+      <button class="icon-btn" id="langBtn" type="button"></button>
+      <button class="icon-btn theme-btn" id="themeBtn" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
+      <button class="icon-btn" id="logoutBtn" type="button" data-i18n-title="logout"><i data-lucide="log-out"></i></button>
+    </div>
+  </header>
+
+  <nav class="nav" id="nav">
+    <button type="button" class="nav-item active" data-page="pageNew"><i data-lucide="plus-circle"></i><span data-i18n="nav.new"></span></button>
+    <button type="button" class="nav-item" data-page="pageHistory"><i data-lucide="history"></i><span data-i18n="nav.history"></span></button>
+    <button type="button" class="nav-item" data-page="pageUnpaid"><i data-lucide="clock"></i><span data-i18n="nav.unpaid"></span><b class="nav-badge" id="unpaidBadge" hidden></b></button>
+    <button type="button" class="nav-item" data-page="pageExpenses"><i data-lucide="wallet"></i><span data-i18n="nav.expenses"></span></button>
+    <button type="button" class="nav-item" data-page="pageMachines"><i data-lucide="printer"></i><span data-i18n="nav.machines"></span></button>
+    <button type="button" class="nav-item admin-only" data-page="pageDashboard"><i data-lucide="bar-chart-3"></i><span data-i18n="nav.dashboard"></span></button>
+    <button type="button" class="nav-item admin-only" data-page="pageSettings"><i data-lucide="settings"></i><span data-i18n="nav.settings"></span></button>
+  </nav>
+
+  <main class="main">
+
+    <!-- ========== NEW TRANSACTION ========== -->
+    <section class="page active" id="pageNew">
+      <div class="pos">
+        <div class="pos-left">
+          <div class="panel" id="quickPanel">
+            <div class="panel-head">
+              <h2><i data-lucide="zap"></i> <span data-i18n="qp.title"></span></h2>
+              <span class="muted small" data-i18n="qp.hint"></span>
+            </div>
+            <div class="quick-grid" id="quickGrid"></div>
+          </div>
+
+          <div class="panel" id="builder">
+            <div class="panel-head">
+              <h2><i data-lucide="sliders-horizontal"></i> <span id="builderTitle" data-i18n="b.title"></span></h2>
+              <button class="link-btn" id="bReset" type="button" data-i18n="b.reset"></button>
+            </div>
+            <div class="svc-grid" id="svcGrid">
+              <button type="button" class="svc" data-svc="A4"><i data-lucide="file"></i><span>A4</span></button>
+              <button type="button" class="svc" data-svc="A3"><i data-lucide="file-text"></i><span>A3</span></button>
+              <button type="button" class="svc" data-svc="A5"><i data-lucide="clipboard"></i><span>A5</span></button>
+              <button type="button" class="svc" data-svc="eng"><i data-lucide="ruler"></i><span data-svc-label="eng"></span></button>
+              <button type="button" class="svc" data-svc="books"><i data-lucide="book-open"></i><span data-svc-label="books"></span></button>
+              <button type="button" class="svc" data-svc="office"><i data-lucide="paperclip"></i><span data-svc-label="office"></span></button>
+              <button type="button" class="svc" data-svc="pads"><i data-lucide="package"></i><span data-svc-label="pads"></span></button>
+              <button type="button" class="svc" data-svc="wrap"><i data-lucide="layers"></i><span data-svc-label="wrap"></span></button>
+              <button type="button" class="svc" data-svc="upload"><i data-lucide="upload"></i><span data-svc-label="upload"></span></button>
+              <button type="button" class="svc" data-svc="custom"><i data-lucide="pencil"></i><span data-svc-label="custom"></span></button>
+            </div>
+
+            <div class="opts" id="paperOpts" hidden>
+              <div class="opt"><span class="opt-label" data-i18n="op.section"></span>
+                <div class="seg" id="segOp">
+                  <button type="button" data-v="print"><i data-lucide="printer"></i><span data-val-label="print"></span></button>
+                  <button type="button" data-v="copy"><i data-lucide="copy"></i><span data-val-label="copy"></span></button>
+                  <button type="button" data-v="scan"><i data-lucide="scan-line"></i><span data-val-label="scan"></span></button>
+                </div>
+              </div>
+              <div class="opt" id="optColor"><span class="opt-label" data-i18n="color.section"></span>
+                <div class="seg" id="segColor">
+                  <button type="button" data-v="black"><span data-val-label="black"></span></button>
+                  <button type="button" data-v="color"><i data-lucide="palette"></i><span data-val-label="color"></span></button>
+                </div>
+              </div>
+              <div class="opt" id="optFace"><span class="opt-label" data-i18n="face.section"></span>
+                <div class="seg" id="segFace">
+                  <button type="button" data-v="one"><span data-val-label="one"></span></button>
+                  <button type="button" data-v="two"><span data-val-label="two"></span></button>
+                </div>
+              </div>
+              <div class="opt" id="optFinish"><span class="opt-label" data-i18n="finish.section"></span>
+                <div class="seg" id="segFinish">
+                  <button type="button" data-v="normal"><span data-val-label="normal"></span></button>
+                  <button type="button" data-v="glossy"><i data-lucide="sparkles"></i><span data-val-label="glossy"></span></button>
+                </div>
+              </div>
+              <div class="opt" id="optEngPm"><span class="opt-label" data-i18n="eng.pricing"></span>
+                <div class="seg" id="segEngPm">
+                  <button type="button" data-v="meter"><span data-i18n="eng.perMeter"></span></button>
+                  <button type="button" data-v="fixed"><span data-i18n="eng.fixed"></span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fields" id="bFields" hidden>
+              <div class="field grow" id="fDesc"><label for="bDesc" id="bDescLabel"></label><input id="bDesc" list="descList" autocomplete="off"><datalist id="descList"></datalist></div>
+              <div class="field" id="fLength"><label for="bLength" data-i18n="eng.length"></label><input id="bLength" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field" id="fQty"><label for="bQty" data-i18n="qty"></label>
+                <div class="stepper"><button type="button" class="step" id="qtyDec" aria-label="-"><i data-lucide="minus"></i></button><input id="bQty" type="number" inputmode="numeric" min="1" placeholder="1"><button type="button" class="step" id="qtyInc" aria-label="+"><i data-lucide="plus"></i></button></div>
+              </div>
+              <div class="field" id="fPrice"><label for="bPrice" id="bPriceLabel"></label><input id="bPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><small class="field-hint" id="bPriceHint"></small></div>
+              <div class="field grow" id="fEngNote"><label for="bEngNote" data-i18n="eng.note"></label><input id="bEngNote" autocomplete="off" data-i18n-ph="eng.notePh"></div>
+            </div>
+            <div class="builder-foot" id="bFoot" hidden>
+              <label class="check" id="fFinal"><input type="checkbox" id="bFinal"><span data-i18n="b.isTotal"></span></label>
+              <div class="line-preview"><span class="muted" id="bHint"></span><span data-i18n="b.lineTotal"></span> <strong id="bLineTotal">0.00</strong></div>
+              <button type="button" class="btn btn-add" id="bAdd" disabled><i data-lucide="plus"></i><span id="bAddLabel" data-i18n="add"></span><kbd class="desk">↵</kbd></button>
+            </div>
+            <p class="builder-empty" id="builderEmpty" data-i18n="b.pick"></p>
+          </div>
+        </div>
+
+        <aside class="pos-right">
+          <div class="panel cart" id="cart">
+            <div class="edit-banner" id="editBanner" hidden><i data-lucide="pencil"></i><span id="editBannerTxt"></span><button type="button" class="link-btn" id="cancelEdit" data-i18n="edit.cancel"></button></div>
+            <div class="panel-head">
+              <h2><i data-lucide="receipt"></i> <span data-i18n="inv.title"></span></h2>
+              <button class="link-btn danger" id="cartClear" type="button" data-i18n="inv.clear"></button>
+            </div>
+            <div class="field"><label for="cClient" data-i18n="newtx.client"></label><input id="cClient" list="clientList" autocomplete="off" data-i18n-ph="newtx.optional"><datalist id="clientList"></datalist></div>
+            <div class="field"><label data-i18n="pay.section"></label>
+              <div class="pay-chips" id="payChips">
+                <button type="button" class="pchip sel" data-pay="cash"><i data-lucide="banknote"></i><span data-pay-label="cash"></span></button>
+                <button type="button" class="pchip" data-pay="instapay"><i data-lucide="smartphone"></i><span data-pay-label="instapay"></span></button>
+                <button type="button" class="pchip" data-pay="vodafone"><i data-lucide="phone"></i><span data-pay-label="vodafone"></span></button>
+                <button type="button" class="pchip notpaid" data-pay="notpaid"><i data-lucide="clock"></i><span data-pay-label="notpaid"></span></button>
+                <button type="button" class="pchip" data-pay="other"><i data-lucide="pencil"></i><span data-pay-label="other"></span></button>
+              </div>
+              <input id="payOther" class="mt" hidden autocomplete="off" data-i18n-ph="pay.otherPh">
+            </div>
+            <div class="cart-meta">
+              <label class="date-pill"><i data-lucide="calendar"></i><input type="date" id="cDate"></label>
+              <button type="button" class="link-btn" id="noteToggle"><i data-lucide="sticky-note"></i> <span data-i18n="newtx.addNote"></span></button>
+            </div>
+            <textarea id="cNotes" hidden data-i18n-ph="newtx.notesPh"></textarea>
+            <div class="cart-lines" id="cartLines"></div>
+            <div class="cart-total"><span data-i18n="inv.total"></span><strong id="cartTotal">0.00</strong></div>
+            <button type="button" class="btn btn-save btn-block" id="btnSave" disabled><i data-lucide="check"></i><span id="btnSaveLabel" data-i18n="save.tx"></span><kbd class="desk">Ctrl ↵</kbd></button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ========== HISTORY ========== -->
+    <section class="page" id="pageHistory">
+      <div class="page-head"><h1><i data-lucide="history"></i> <span data-i18n="hist.title"></span></h1></div>
+      <div class="toolbar">
+        <label class="search"><i data-lucide="search"></i><input id="hSearch" type="search" autocomplete="off" data-i18n-ph="hist.search"></label>
+        <div class="chips" id="hRange">
+          <button type="button" class="chip active" data-range="today" data-i18n="filter.today"></button>
+          <button type="button" class="chip" data-range="week" data-i18n="filter.week"></button>
+          <button type="button" class="chip" data-range="month" data-i18n="filter.month"></button>
+          <button type="button" class="chip" data-range="all" data-i18n="filter.all"></button>
+        </div>
+        <div class="chips" id="hFlags">
+          <button type="button" class="chip flag" data-flag="unpaid"><i data-lucide="clock"></i> <span data-i18n="flag.unpaid"></span></button>
+          <button type="button" class="chip flag" data-flag="mistake"><i data-lucide="alert-triangle"></i> <span data-i18n="flag.mistake"></span></button>
+        </div>
+      </div>
+      <div class="summary" id="hSummary" hidden></div>
+      <div id="hList"></div>
+      <button type="button" class="btn btn-ghost btn-block" id="hMore" hidden data-i18n="hist.more"></button>
+    </section>
+
+    <!-- ========== UNPAID ========== -->
+    <section class="page" id="pageUnpaid">
+      <div class="page-head"><h1><i data-lucide="clock"></i> <span data-i18n="unpaid.title"></span></h1></div>
+      <div class="summary danger" id="uSummary"></div>
+      <div id="uList"></div>
+    </section>
+
+    <!-- ========== OPERATIONAL COSTS ========== -->
+    <section class="page" id="pageExpenses">
+      <div class="page-head"><h1><i data-lucide="wallet"></i> <span data-i18n="oc.title"></span></h1></div>
+      <div class="split">
+        <div class="panel">
+          <h2 class="panel-title" data-i18n="oc.new"></h2>
+          <div class="chips wrap" id="expTypes">
+            <button type="button" class="chip" data-exp="repair"><i data-lucide="wrench"></i> <span data-exp-label="repair"></span></button>
+            <button type="button" class="chip" data-exp="internet"><i data-lucide="wifi"></i> <span data-exp-label="internet"></span></button>
+            <button type="button" class="chip" data-exp="electricity"><i data-lucide="zap"></i> <span data-exp-label="electricity"></span></button>
+            <button type="button" class="chip" data-exp="salaries"><i data-lucide="users"></i> <span data-exp-label="salaries"></span></button>
+            <button type="button" class="chip" data-exp="inventory"><i data-lucide="package"></i> <span data-exp-label="inventory"></span></button>
+            <button type="button" class="chip" data-exp="other"><i data-lucide="pencil"></i> <span data-exp-label="other"></span></button>
+          </div>
+          <div class="field" id="fExpOther" hidden><label for="expOther" data-i18n="oc.otherType"></label><input id="expOther" autocomplete="off" data-i18n-ph="oc.otherPh"></div>
+          <div class="row">
+            <div class="field"><label for="expAmount" data-i18n="oc.amount"></label><input id="expAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+            <div class="field"><label for="expDate" data-i18n="oc.date"></label><input id="expDate" type="date"></div>
+          </div>
+          <div class="field"><label for="expNote" data-i18n="oc.note"></label><input id="expNote" autocomplete="off" data-i18n-ph="oc.notePh"></div>
+          <button type="button" class="btn btn-primary btn-block" id="expSave" disabled><i data-lucide="check"></i><span data-i18n="oc.save"></span></button>
+        </div>
+        <div>
+          <div class="chips" id="expRange">
+            <button type="button" class="chip" data-range="today" data-i18n="filter.today"></button>
+            <button type="button" class="chip" data-range="week" data-i18n="filter.week"></button>
+            <button type="button" class="chip active" data-range="month" data-i18n="filter.month"></button>
+            <button type="button" class="chip" data-range="all" data-i18n="filter.all"></button>
+          </div>
+          <div class="summary warn" id="expSummary"></div>
+          <div id="expList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MACHINES ========== -->
+    <section class="page" id="pageMachines">
+      <div class="page-head"><h1><i data-lucide="printer"></i> <span data-i18n="mach.title"></span></h1></div>
+      <div class="mach-grid" id="machList"></div>
+    </section>
+
+    <!-- ========== DASHBOARD (admin) ========== -->
+    <section class="page" id="pageDashboard">
+      <div class="page-head"><h1><i data-lucide="bar-chart-3"></i> <span data-i18n="dash.title"></span></h1></div>
+      <div class="filter-row">
+        <div class="chips" id="dRange">
+          <button type="button" class="chip active" data-range="today" data-i18n="range.today"></button>
+          <button type="button" class="chip" data-range="yesterday" data-i18n="range.yesterday"></button>
+          <button type="button" class="chip" data-range="week" data-i18n="range.week"></button>
+          <button type="button" class="chip" data-range="month" data-i18n="range.month"></button>
+          <button type="button" class="chip" data-range="lastmonth" data-i18n="range.lastmonth"></button>
+        </div>
+        <label class="date-pill" data-i18n-title="range.day"><i data-lucide="calendar"></i><input type="date" id="dDay"></label>
+      </div>
+      <div class="dash-top">
+        <div class="panel hero" id="dHero"></div>
+        <div class="tiles" id="dTiles"></div>
+      </div>
+      <div class="chart-grid">
+        <div class="panel chart-card wide" id="cTrend"></div>
+        <div class="panel chart-card" id="cSvc"></div>
+        <div class="panel chart-card" id="cPay"></div>
+        <div class="panel chart-card" id="cCosts"></div>
+      </div>
+      <h2 class="section-title" data-i18n="dash.longTerm"></h2>
+      <div class="panel chart-card" id="cMonths"></div>
+    </section>
+
+    <!-- ========== SETTINGS (admin) ========== -->
+    <section class="page" id="pageSettings">
+      <div class="page-head"><h1><i data-lucide="settings"></i> <span data-i18n="set.title"></span></h1></div>
+      <div class="settings-grid">
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="download"></i> <span data-i18n="exp.title"></span></h2>
+          <div class="chips" id="xRange">
+            <button type="button" class="chip" data-range="today" data-i18n="filter.today"></button>
+            <button type="button" class="chip active" data-range="month" data-i18n="filter.month"></button>
+            <button type="button" class="chip" data-range="all" data-i18n="filter.all"></button>
+          </div>
+          <div class="row">
+            <div class="field"><label for="xFrom" data-i18n="exp.from"></label><input type="date" id="xFrom"></div>
+            <div class="field"><label for="xTo" data-i18n="exp.to"></label><input type="date" id="xTo"></div>
+          </div>
+          <label class="check"><input type="checkbox" id="xMistakes"><span data-i18n="exp.inclMistakes"></span></label>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="xXlsx"><i data-lucide="download"></i><span data-i18n="exp.btn"></span></button>
+            <button type="button" class="btn btn-ghost" id="xCsv"><i data-lucide="file-spreadsheet"></i><span data-i18n="exp.csvBtn"></span></button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="hard-drive"></i> <span data-i18n="backup.title"></span></h2>
+          <p class="muted small" data-i18n="backup.desc"></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost" id="bkExport"><i data-lucide="save"></i><span data-i18n="backup.export"></span></button>
+            <label class="btn btn-ghost"><i data-lucide="folder-open"></i><span data-i18n="backup.import"></span><input type="file" id="bkImport" accept=".json" hidden></label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="lock"></i> <span data-i18n="pw.title"></span></h2>
+          <div class="row end">
+            <div class="field"><label for="pwEmp" data-i18n="pw.emp"></label><input type="password" id="pwEmp" autocomplete="new-password" placeholder="••••"></div>
+            <button type="button" class="btn btn-ghost" id="pwEmpBtn" data-i18n="pw.change"></button>
+          </div>
+          <div class="row end">
+            <div class="field"><label for="pwCur" data-i18n="pw.current"></label><input type="password" id="pwCur" autocomplete="current-password" placeholder="••••"></div>
+            <div class="field"><label for="pwAdmin" data-i18n="pw.admin"></label><input type="password" id="pwAdmin" autocomplete="new-password" placeholder="••••"></div>
+            <button type="button" class="btn btn-ghost" id="pwAdminBtn" data-i18n="pw.change"></button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="printer"></i> <span data-i18n="machset.title"></span></h2>
+          <div id="msList"></div>
+          <div class="row end">
+            <div class="field"><label for="msNew" data-i18n="machset.name"></label><input id="msNew" autocomplete="off"></div>
+            <button type="button" class="btn btn-ghost" id="msAdd"><i data-lucide="plus"></i><span data-i18n="machset.add"></span></button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="tags"></i> <span data-i18n="cat.title"></span></h2>
+          <p class="muted small" data-i18n="cat.desc"></p>
+          <div id="catEditor"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="info"></i> <span data-i18n="about.title"></span></h2>
+          <p class="muted small" data-i18n="about.desc"></p>
+          <p class="muted small" id="aboutVer"></p>
+          <a class="btn btn-ghost" href="../"><i data-lucide="external-link"></i><span data-i18n="beta.classic"></span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- shown on phones while the cart's Save button is scrolled out of view -->
+  <div class="savebar" id="saveBar" hidden>
+    <div class="savebar-info"><span id="sbCount"></span><strong id="sbTotal"></strong></div>
+    <button type="button" class="btn btn-save" id="sbSave"><i data-lucide="check"></i><span data-i18n="save.short"></span></button>
+  </div>
+</div>
+
+<!-- ==================== DIALOGS ==================== -->
+<div class="overlay" id="confirmOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-icon" id="confirmIcon"></div>
+    <h3 id="confirmTitle"></h3>
+    <p class="modal-sub" id="confirmSub"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="confirmNo"></button>
+      <button type="button" class="btn btn-danger" id="confirmYes"></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="payOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <div class="modal-icon ok"><i data-lucide="check-circle"></i></div>
+    <h3 id="payTitle" data-i18n="pay.dialogTitle"></h3>
+    <p class="modal-sub" id="paySub"></p>
+    <div class="pay-chips center" id="payDlgChips">
+      <button type="button" class="pchip sel" data-pay="cash"><i data-lucide="banknote"></i><span data-pay-label="cash"></span></button>
+      <button type="button" class="pchip" data-pay="instapay"><i data-lucide="smartphone"></i><span data-pay-label="instapay"></span></button>
+      <button type="button" class="pchip" data-pay="vodafone"><i data-lucide="phone"></i><span data-pay-label="vodafone"></span></button>
+      <button type="button" class="pchip" data-pay="other"><i data-lucide="pencil"></i><span data-pay-label="other"></span></button>
+    </div>
+    <input id="payDlgOther" class="mt" hidden autocomplete="off" data-i18n-ph="pay.otherPh">
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="payNo" data-i18n="confirm.cancel"></button>
+      <button type="button" class="btn btn-save" id="payYes" data-i18n="pay.confirm"></button>
+    </div>
+  </div>
+</div>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
+
+<script src="js/core.js?v=1"></script>
+<script src="js/pos.js?v=1"></script>
+<script src="js/lists.js?v=1"></script>
+<script src="js/dash.js?v=1"></script>
+<script src="js/settings.js?v=1"></script>
+<script src="js/boot.js?v=1"></script>
+</body>
+</html>
