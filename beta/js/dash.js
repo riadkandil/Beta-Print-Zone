@@ -45,7 +45,7 @@ function metrics(from, to) {
   return {
     txs, exps, rev, costs, net: rev - costs, count: txs.length, avg: txs.length ? rev / txs.length : 0,
     unpaid: sumBy(txs.filter(tx => tx.payMethod === 'notpaid'), 'total'),
-    eng: sumBy(txs, 'engMeters'), pieces: sumBy(txs, 'pieces'),
+    engJobs: txs.reduce((n, tx) => n + (tx.items || []).filter(it => it.svc === 'eng').length, 0), pieces: sumBy(txs, 'pieces'),
   };
 }
 /* Signed change vs the previous period; colour = direction × whether up is good, always with an arrow and text */
@@ -219,7 +219,7 @@ function renderDashboard() {
     kpi('wallet', 'orange', t('dash.costs'), fmtInt(cur.costs), deltaHtml(cur.costs, prev.costs, false)),
     kpi('trending-up', 'green', t('dash.net'), signed(cur.net), deltaHtml(cur.net, prev.net, true)),
     kpi('hourglass', 'red', t('dash.unpaid'), fmtInt(cur.unpaid)),
-    kpi('drafting-compass', 'amber', t('dash.eng'), round2(cur.eng).toLocaleString('en-US')),
+    kpi('drafting-compass', 'amber', t('dash.engJobs'), fmtInt(cur.engJobs), deltaHtml(cur.engJobs, prev.engJobs, true)),
   ].join('');
 
   /* ----- insights: plain-language facts about the period ----- */

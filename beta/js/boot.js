@@ -28,7 +28,7 @@ function enterApp(role, fresh) {
   sessionStorage.setItem('pz_session', role);
   $('loginView').hidden = true;
   $('appView').hidden = false;
-  $('rolePill').textContent = t('role.' + role);
+  setRoleUi();
   qsa('.admin-only').forEach(el => { el.hidden = role !== 'admin'; });
   updateConnPill();
   initPos();

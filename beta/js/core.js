@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v2.1 beta';
+const APP_VERSION = 'v2.6 beta';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -129,9 +129,16 @@ const I18N = {
     'cat.search': 'Search services…', 'cat.all': 'All', 'cat.print': 'Printing', 'cat.eng': 'Engineering',
     'cat.shop': 'Stationery', 'cat.extra': 'Services', 'cat.none': 'No service matches your search',
     'svcsub.A4': 'Print · copy · scan', 'svcsub.A3': 'Print · copy · scan', 'svcsub.A5': 'Print · copy · scan',
-    'svcsub.eng': 'Plans · per meter', 'svcsub.books': 'Books & notebooks', 'svcsub.office': 'Pens, files…',
+    'svcsub.eng': 'Plans & large prints', 'svcsub.books': 'Books & notebooks', 'svcsub.office': 'Pens, files…',
     'svcsub.pads': 'Pad binding', 'svcsub.wrap': 'Laminating', 'svcsub.upload': 'Online forms', 'svcsub.custom': 'Anything else',
-    'b.close': 'Close', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
+    'b.close': 'Close', 'b.addSave': 'Add & place order',
+    'page.new': 'New order', 'pos.services': 'Services', 'side.today': 'Today', 'pricing.total': 'Total price',
+    'svcsub.contract': 'Stationery', 'svcsub.poa': 'Stationery', 'svcsub.writing': 'Stationery',
+    'th.title': 'Themes', 'th.desc': 'Pick the shade of blue for light and dark mode on this device.', 'th.light': 'Light', 'th.dark': 'Dark',
+    'lt.classic': 'Classic', 'lt.sky': 'Sky', 'lt.ocean': 'Ocean', 'lt.navy': 'Navy', 'lt.steel': 'Steel', 'lt.indigo': 'Indigo',
+    'dt.midnight': 'Midnight', 'dt.navy': 'Navy', 'dt.ocean': 'Ocean', 'dt.steel': 'Steel', 'dt.royal': 'Royal', 'dt.abyss': 'Abyss',
+    'side.orders': 'Orders', 'side.ordersSub': 'Yesterday: {n}', 'opb.print': 'Print', 'opb.copy': 'Copy', 'opb.scan': 'Scan',
+    'nav.toggle': 'Show / hide menu', 'nav.menu': 'Menu', 'nav.admin': 'Admin', 'nav.collapse': 'Collapse', 'dash.engJobs': 'Engineering jobs', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
     'b.title': 'Add an item', 'b.edit': 'Edit item', 'b.reset': 'Reset',
     'b.item': 'Product', 'desc.optional': 'Description (optional)', 'custom.name': 'Service name',
     'b.isTotal': 'Price is the total for all pieces', 'b.lineTotal': 'Line total',
@@ -247,9 +254,16 @@ const I18N = {
     'cat.search': 'ابحث عن خدمة…', 'cat.all': 'الكل', 'cat.print': 'طباعة', 'cat.eng': 'هندسي',
     'cat.shop': 'أدوات', 'cat.extra': 'خدمات', 'cat.none': 'لا توجد خدمة مطابقة للبحث',
     'svcsub.A4': 'طباعة · تصوير · سكان', 'svcsub.A3': 'طباعة · تصوير · سكان', 'svcsub.A5': 'طباعة · تصوير · سكان',
-    'svcsub.eng': 'لوحات · بالمتر', 'svcsub.books': 'كتب وكشاكيل', 'svcsub.office': 'أقلام، ملفات…',
+    'svcsub.eng': 'لوحات ومطبوعات كبيرة', 'svcsub.books': 'كتب وكشاكيل', 'svcsub.office': 'أقلام، ملفات…',
     'svcsub.pads': 'تكعيب', 'svcsub.wrap': 'تغليف', 'svcsub.upload': 'استمارات أونلاين', 'svcsub.custom': 'أي خدمة أخرى',
-    'b.close': 'إغلاق', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
+    'b.close': 'إغلاق', 'b.addSave': 'إضافة وتسجيل الطلب',
+    'page.new': 'طلب جديد', 'pos.services': 'الخدمات', 'side.today': 'اليوم', 'pricing.total': 'سعر إجمالي',
+    'svcsub.contract': 'أدوات', 'svcsub.poa': 'أدوات', 'svcsub.writing': 'أدوات',
+    'th.title': 'الألوان', 'th.desc': 'اختر درجة الأزرق للوضع الفاتح والداكن على هذا الجهاز.', 'th.light': 'فاتح', 'th.dark': 'داكن',
+    'lt.classic': 'كلاسيكي', 'lt.sky': 'سماوي', 'lt.ocean': 'محيطي', 'lt.navy': 'كحلي', 'lt.steel': 'فولاذي', 'lt.indigo': 'نيلي',
+    'dt.midnight': 'ليلي', 'dt.navy': 'كحلي', 'dt.ocean': 'محيطي', 'dt.steel': 'فولاذي', 'dt.royal': 'ملكي', 'dt.abyss': 'عميق',
+    'side.orders': 'الطلبات', 'side.ordersSub': 'أمس: {n}', 'opb.print': 'طباعة', 'opb.copy': 'تصوير', 'opb.scan': 'سكان',
+    'nav.toggle': 'إظهار / إخفاء القائمة', 'nav.menu': 'القائمة', 'nav.admin': 'الإدارة', 'nav.collapse': 'تصغير', 'dash.engJobs': 'أعمال الهندسي', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
     'b.title': 'إضافة خدمة', 'b.edit': 'تعديل الخدمة', 'b.reset': 'مسح',
     'b.item': 'المنتج', 'desc.optional': 'الوصف (اختياري)', 'custom.name': 'اسم الخدمة',
     'b.isTotal': 'السعر هو الإجمالي لكل القطع', 'b.lineTotal': 'إجمالي البند',
@@ -353,6 +367,9 @@ const SVC_LABELS = {
   wrap: { en: 'Lamination', ar: 'تغليف' },
   upload: { en: 'Electronic Upload', ar: 'رفع الكتروني' },
   custom: { en: 'Other service', ar: 'خدمة أخرى' },
+  contract: { en: 'Contract', ar: 'عقد' },
+  poa: { en: 'Power of Attorney', ar: 'توكيل' },
+  writing: { en: 'Writing', ar: 'كتابة' },
 };
 const VAL_LABELS = {
   print: { en: 'Print', ar: 'طباعة' }, scan: { en: 'Scan', ar: 'سكان' }, copy: { en: 'Photocopy', ar: 'تصوير' },
@@ -377,9 +394,14 @@ const SVC_DEFS = [
   { k: 'A3', cat: 'print', icon: 'file-text', c: ['#8b5cf6', '#5b21b6'] },
   { k: 'A5', cat: 'print', icon: 'sticky-note', c: ['#06b6d4', '#0e7490'] },
   { k: 'eng', cat: 'eng', icon: 'drafting-compass', c: ['#f97316', '#b45309'] },
-  { k: 'books', cat: 'shop', icon: 'book-open', c: ['#10b981', '#047857'] },
-  { k: 'office', cat: 'shop', icon: 'paperclip', c: ['#ec4899', '#9d174d'] },
-  { k: 'pads', cat: 'shop', icon: 'notebook-pen', c: ['#eab308', '#a16207'] },
+  // stationery: three plain items, price (and quantity) only
+  { k: 'contract', cat: 'shop', icon: 'file-signature', c: ['#10b981', '#047857'], plain: true },
+  { k: 'poa', cat: 'shop', icon: 'stamp', c: ['#ec4899', '#9d174d'], plain: true },
+  { k: 'writing', cat: 'shop', icon: 'pen-line', c: ['#eab308', '#a16207'], plain: true },
+  // older stationery items: no tile any more, kept so saved orders still show their name and icon
+  { k: 'books', cat: 'shop', icon: 'book-open', c: ['#10b981', '#047857'], hidden: true },
+  { k: 'office', cat: 'shop', icon: 'paperclip', c: ['#ec4899', '#9d174d'], hidden: true },
+  { k: 'pads', cat: 'shop', icon: 'notebook-pen', c: ['#eab308', '#a16207'], hidden: true },
   { k: 'wrap', cat: 'extra', icon: 'layers', c: ['#6366f1', '#3730a3'] },
   { k: 'upload', cat: 'extra', icon: 'cloud-upload', c: ['#0ea5e9', '#075985'] },
   { k: 'custom', cat: 'extra', icon: 'wand-sparkles', c: ['#64748b', '#334155'] },
@@ -596,10 +618,22 @@ function refreshAfterData() {
 }
 function renderActivePage() { const fn = pageRenderers[state.page]; if (fn) fn(); }
 function renderBadges() {
-  const n = liveTx().filter(tx => tx.payMethod === 'notpaid').length;
-  const b = $('unpaidBadge');
-  b.hidden = !n;
-  b.textContent = n > 99 ? '99+' : n;
+  const live = liveTx();
+  const n = live.filter(tx => tx.payMethod === 'notpaid').length;
+  ['unpaidBadge', 'bellDot'].forEach(id => { const b = $(id); b.hidden = !n; b.textContent = n > 99 ? '99+' : n; });
+  renderSideStats(live);
+}
+/* Sidebar "today" figure: orders against yesterday */
+function renderSideStats(live) {
+  const today = todayStr(), yest = addDays(today, -1);
+  let nToday = 0, nYest = 0;
+  for (const tx of live) {
+    if (tx.date === today) nToday++;
+    else if (tx.date === yest) nYest++;
+  }
+  $('ssOrders').textContent = fmtInt(nToday);
+  $('ssOrdersBar').style.width = (nToday ? nToday / Math.max(nToday, nYest) * 100 : 0) + '%';
+  $('ssOrdersSub').textContent = t('side.ordersSub', { n: fmtInt(nYest) });
 }
 
 /* ==================== UI: TOAST, DIALOGS, TOOLTIP ==================== */
@@ -693,11 +727,61 @@ function go(pageId) {
   if ((pageId === 'pageDashboard' || pageId === 'pageSettings') && state.role !== 'admin') return;
   state.page = pageId;
   qsa('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === pageId));
+  document.body.dataset.page = pageId;
+  updatePageTitle();
+  setNavOpen(false);
+  setUserMenu(false);
   qsa('.page').forEach(p => p.classList.toggle('active', p.id === pageId));
+  // wide screens scroll inside the app card, phones scroll the window
   window.scrollTo(0, 0);
+  $('main').scrollTop = 0;
   renderActivePage();
 }
-$('nav').addEventListener('click', e => { const b = e.target.closest('.nav-item'); if (b) go(b.dataset.page); });
+$('nav').addEventListener('click', e => { const b = e.target.closest('.nav-item[data-page]'); if (b) go(b.dataset.page); });
+const PAGES = {
+  pageNew: ['page.new', 'layout-grid'], pageHistory: ['hist.title', 'clock-3'], pageUnpaid: ['unpaid.title', 'hourglass'],
+  pageExpenses: ['oc.title', 'wallet'], pageMachines: ['mach.title', 'printer'], pageDashboard: ['dash.title', 'bar-chart-3'], pageSettings: ['set.title', 'settings'],
+};
+/* The page title carries the page's icon in a small blue square */
+function updatePageTitle() {
+  const [title, icon] = PAGES[state.page] || PAGES.pageNew;
+  $('pageTitle').textContent = t(title);
+  $('pageIcon').innerHTML = ic(icon);
+}
+/* The logo is the way back to recording orders */
+$('brandHome').addEventListener('click', e => { e.preventDefault(); if (state.role) go('pageNew'); });
+$('bellBtn').addEventListener('click', () => go('pageUnpaid'));
+
+/* Account menu under the avatar: status, version, classic link, sign out */
+function setUserMenu(open) { $('userMenu').hidden = !open; $('userBtn').setAttribute('aria-expanded', open); }
+$('userBtn').addEventListener('click', () => setUserMenu($('userMenu').hidden));
+document.addEventListener('click', e => { if (!e.target.closest('.user')) setUserMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') setUserMenu(false); });
+function setRoleUi() {
+  const name = t('role.' + state.role);
+  $('rolePill').textContent = $('umRole').textContent = name;
+  // Arabic role names start with the article "ال", so the avatar uses the letter after it
+  $('avatarTxt').textContent = $('umInitial').textContent = name.replace(/^ال/, '').charAt(0).toUpperCase();
+}
+
+/* Sidebar: collapsed to icons on wide screens (remembered), a drawer on narrow ones */
+const narrowNav = () => matchMedia('(max-width:899px)').matches;
+function setNavOpen(open) {
+  document.body.classList.toggle('nav-open', open);
+  $('navBackdrop').hidden = !open;
+}
+function setNavCollapsed(c) {
+  document.body.classList.toggle('nav-collapsed', c);
+  try { localStorage.setItem('pz_beta_nav', c ? 'collapsed' : 'open'); } catch (e) { /* private mode */ }
+}
+try { if (localStorage.getItem('pz_beta_nav') === 'collapsed') document.body.classList.add('nav-collapsed'); } catch (e) { /* private mode */ }
+/* the header button opens the drawer on phones; the button at the top of the sidebar collapses it (or closes the drawer) */
+$('navToggle').addEventListener('click', () => setNavOpen(!document.body.classList.contains('nav-open')));
+$('navCollapse').addEventListener('click', () => {
+  if (narrowNav()) setNavOpen(false);
+  else setNavCollapsed(!document.body.classList.contains('nav-collapsed'));
+});
+$('navBackdrop').addEventListener('click', () => setNavOpen(false));
 
 /* ==================== LANGUAGE & THEME ==================== */
 function applyI18n() {
@@ -711,17 +795,48 @@ function applyI18n() {
   qsa('[data-val-label]').forEach(el => { el.textContent = valLabel(el.dataset.valLabel); });
   qsa('[data-exp-label]').forEach(el => { el.textContent = EXP_LABELS[el.dataset.expLabel][lang]; });
   qsa('[data-pay-label]').forEach(el => { el.textContent = PAY_LABELS[el.dataset.payLabel][lang]; });
-  const other = lang === 'ar' ? 'EN' : 'ع';
+  const other = lang === 'ar' ? 'EN' : 'AR';
   $('langBtn').textContent = other; $('langLogin').textContent = other;
   $('langBtn').title = $('langLogin').title = lang === 'ar' ? 'English' : 'العربية';
   updateConnPill();
   updateClock();
-  if (state.role) { $('rolePill').textContent = t('role.' + state.role); onLangChange.forEach(fn => fn()); renderActivePage(); }
+  $('navVer').textContent = APP_VERSION;
+  if (state.role) { updatePageTitle(); setRoleUi(); renderBadges(); onLangChange.forEach(fn => fn()); renderActivePage(); }
 }
 const onLangChange = [];
 function toggleLang() { lang = lang === 'ar' ? 'en' : 'ar'; localStorage.setItem('pz_lang', lang); applyI18n(); }
-/* The beta opens in its dark POS theme; its choice is kept apart from the classic app's */
-if (localStorage.getItem('pz_beta_theme') !== 'light') document.documentElement.classList.add('dark');
+/* The beta opens light unless dark was chosen; its choice is kept apart from the classic app's */
+if (localStorage.getItem('pz_beta_theme') === 'dark') document.documentElement.classList.add('dark');
+/* Light and dark mode each come in several shades of blue, chosen in Settings and kept per device */
+const LIGHT_THEMES = [
+  { k: 'classic', bg: '#ffffff', soft: '#f0f2f8', side: '#2363c7', accent: '#2363c7' },
+  { k: 'sky', bg: '#ffffff', soft: '#eef4fb', side: '#3a8ee6', accent: '#2b7fd9' },
+  { k: 'ocean', bg: '#ffffff', soft: '#edf4f7', side: '#0f6f9e', accent: '#0e78a8' },
+  { k: 'navy', bg: '#ffffff', soft: '#eff2f8', side: '#1b3a73', accent: '#1f4590' },
+  { k: 'steel', bg: '#ffffff', soft: '#f0f2f5', side: '#3d5a80', accent: '#3f6595' },
+  { k: 'indigo', bg: '#ffffff', soft: '#f1f1fa', side: '#4549c7', accent: '#4a4fd6' },
+];
+const DARK_THEMES = [
+  { k: 'midnight', bg: '#131c2e', soft: '#1b2640', side: '#1a4aa0', accent: '#3b7be0' },
+  { k: 'navy', bg: '#0b1530', soft: '#13204a', side: '#163f9a', accent: '#3d7bf0' },
+  { k: 'ocean', bg: '#0c1c29', soft: '#122838', side: '#11598a', accent: '#2a8bd0' },
+  { k: 'steel', bg: '#151a22', soft: '#1e252f', side: '#2b4a78', accent: '#4a7fcf' },
+  { k: 'royal', bg: '#13142d', soft: '#1b1d40', side: '#3439a3', accent: '#5a6cf0' },
+  { k: 'abyss', bg: '#060a14', soft: '#0e1424', side: '#0f2c6a', accent: '#3470e0' },
+];
+{
+  let l = null, d = null;
+  try { l = localStorage.getItem('pz_beta_light'); d = localStorage.getItem('pz_beta_dark'); } catch (e) { /* private mode */ }
+  document.documentElement.dataset.light = LIGHT_THEMES.some(x => x.k === l) ? l : 'classic';
+  document.documentElement.dataset.dark = DARK_THEMES.some(x => x.k === d) ? d : 'midnight';
+}
+/* Picking a shade also switches to its mode, so the choice shows straight away */
+function setThemeShade(mode, k) {
+  document.documentElement.dataset[mode] = k;
+  try { localStorage.setItem('pz_beta_' + mode, k); } catch (e) { /* private mode */ }
+  if (document.documentElement.classList.contains('dark') !== (mode === 'dark')) toggleTheme();
+  else if (state.page === 'pageDashboard') renderActivePage();
+}
 function toggleTheme() {
   document.documentElement.classList.toggle('dark');
   localStorage.setItem('pz_beta_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
@@ -738,11 +853,12 @@ function updateClock() {
 }
 setInterval(updateClock, 15000);
 
+/* Connection state shows as a dot on the avatar and as text in the account menu */
 function updateConnPill() {
-  const pill = $('connPill');
   const mode = !state.online ? 'local' : navigator.onLine ? 'online' : 'offline';
-  pill.className = 'conn ' + mode;
+  document.body.dataset.conn = mode;
   $('connTxt').textContent = t('status.' + mode);
+  $('userBtn').title = t('status.' + mode);
 }
 window.addEventListener('online', updateConnPill);
 window.addEventListener('offline', updateConnPill);

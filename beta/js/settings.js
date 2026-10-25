@@ -236,5 +236,22 @@ pageRenderers.pageSettings = function renderSettings() {
   if (!$('xTo').value) setExportRange('month');
   renderMachSettings();
   renderCatalog();
+  renderThemes();
   $('aboutVer').textContent = APP_VERSION + ' · ' + (state.online ? t('status.online') : t('status.local'));
 };
+
+/* ==================== THEMES ==================== */
+function themeButtons(mode, list, prefix) {
+  const cur = document.documentElement.dataset[mode];
+  return list.map(d => `<button type="button" class="dt${d.k === cur ? ' sel' : ''}" data-mode="${mode}" data-shade="${d.k}" aria-pressed="${d.k === cur}"
+      style="--p-bg:${d.bg};--p-soft:${d.soft};--p-side:${d.side};--p-accent:${d.accent}"><span class="dt-preview"><i></i><b></b></span><span>${escapeHtml(t(prefix + d.k))}</span></button>`).join('');
+}
+function renderThemes() {
+  $('lightThemes').innerHTML = themeButtons('light', LIGHT_THEMES, 'lt.');
+  $('darkThemes').innerHTML = themeButtons('dark', DARK_THEMES, 'dt.');
+}
+['lightThemes', 'darkThemes'].forEach(id => $(id).addEventListener('click', e => {
+  const b = e.target.closest('[data-shade]'); if (!b) return;
+  setThemeShade(b.dataset.mode, b.dataset.shade);
+  renderThemes();
+}));

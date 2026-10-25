@@ -3,14 +3,14 @@
 const PAPER = ['A4', 'A3', 'A5', 'eng'];
 const CATALOG_SVCS = ['books', 'office'];
 /* Builder selections. Options keep their values after an item is added, so the next similar item is one Enter away. */
-const B = { svc: null, op: 'print', color: 'black', face: 'one', finish: 'normal', engPerMeter: true, priceAuto: false, editLineId: null };
+const B = { svc: null, op: 'print', color: 'black', face: 'one', finish: 'normal', final: false, priceAuto: false, editLineId: null };
 const cart = { lines: [], pay: 'cash', editingTx: null, dateTouched: false };
 let lineSeq = 0;
 const newLineId = () => 'l' + (++lineSeq);
 
 const isPaperSvc = svc => PAPER.includes(svc);
-/* Scans and engineering are recorded without a quantity */
-const bQtyless = () => B.svc === 'eng' || (isPaperSvc(B.svc) && B.op === 'scan');
+/* Scans are recorded without a quantity; elsewhere an empty quantity counts as 1 */
+const bQtyless = () => isPaperSvc(B.svc) && B.op === 'scan';
 const numVal = id => parseFloat($(id).value) || 0;
 function readQty() { const v = $('bQty').value.trim(); if (!v) return 1; const n = parseInt(v, 10); return n > 0 ? n : 0; }
 const isVisible = el => !el.closest('[hidden]');
@@ -20,18 +20,16 @@ function buildItem() {
   const noQty = bQtyless();
   const qty = noQty ? 1 : readQty();
   const price = numVal('bPrice');
-  const isFinal = !noQty && $('bFinal').checked;
+  const isFinal = !noQty && B.final;
   if (isPaperSvc(B.svc)) {
-    const eng = B.svc === 'eng', scan = B.op === 'scan';
-    const len = eng ? numVal('bLength') : null;
-    const perMeter = eng && B.engPerMeter;
+    // scans and engineering have no colour, sides or finish; scans are also one price per job
+    const plain = B.op === 'scan' || B.svc === 'eng';
     return {
       type: 'paper', svc: B.svc, op: B.op,
-      color: scan ? '—' : B.color, face: scan ? '—' : B.face, finish: scan ? '—' : B.finish,
+      color: plain ? '—' : B.color, face: plain ? '—' : B.face, finish: plain ? '—' : B.finish,
       desc: null, qty, price,
-      total: round2(isFinal ? price : perMeter ? price * (len || 0) : qty * price),
-      engLength: eng ? (len || 0) : null, engNote: eng ? $('bEngNote').value.trim() : null,
-      engPerMeter: perMeter, noQty, isFinal,
+      total: round2(isFinal ? price : qty * price),
+      engLength: null, engNote: null, engPerMeter: false, noQty, isFinal,
     };
   }
   return {
@@ -43,8 +41,6 @@ function buildItem() {
 }
 function builderError(it) {
   if ((CATALOG_SVCS.includes(it.svc) || it.svc === 'custom') && !it.desc) return 'b.err.desc';
-  // a scan priced per meter needs the length too, or its total would be 0
-  if (it.svc === 'eng' && (it.op !== 'scan' || it.engPerMeter) && !(it.engLength > 0)) return 'b.err.length';
   if (!it.noQty && !(it.qty > 0)) return 'b.err.qty';
   if (!(it.price > 0)) return 'b.err.price';
   return null;
@@ -74,42 +70,40 @@ function suggestPrice(it) {
 }
 
 /* ---------- service tiles ---------- */
-const TILES = { cat: 'all', q: '' };
-function tileMatches(d) {
-  if (TILES.cat !== 'all' && d.cat !== TILES.cat) return false;
-  const q = TILES.q.trim().toLowerCase();
-  if (!q) return true;
-  const names = [d.k, SVC_LABELS[d.k].en, SVC_LABELS[d.k].ar, I18N.en['svcsub.' + d.k], I18N.ar['svcsub.' + d.k]];
-  return names.some(n => String(n).toLowerCase().includes(q));
+const PAPER_OPS = [['print', 'printer'], ['copy', 'copy'], ['scan', 'scan-line']];
+/* Three groups on one screen: paper services as folder cards with Print / Copy / Scan, the rest as small cards */
+const TILE_SECTIONS = [['print', d => isPaperSvc(d.k)], ['shop', d => d.cat === 'shop'], ['extra', d => d.cat === 'extra']];
+function tileHtml(d, n) {
+  const sel = B.svc === d.k;
+  const badge = n ? `<span class="svc-badge">${n}</span>` : '';
+  const name = `<span class="svc-name">${escapeHtml(svcLabel(d.k))}</span>`;
+  if (!isPaperSvc(d.k)) {
+    return `<div class="svc small${sel ? ' sel' : ''}" data-svc="${d.k}"><button type="button" class="svc-main" aria-pressed="${sel}"><span class="svc-ic">${ic(d.icon) || ic('file')}</span>${name}${badge}</button></div>`;
+  }
+  const art = /^A\d$/.test(d.k) ? `<span class="svc-sheet sheet-${d.k}">${d.k}</span>` : `<span class="svc-ic">${ic(d.icon) || ic('file')}</span>`;
+  const ops = PAPER_OPS.map(([op, icon]) => `<button type="button" class="svc-op${sel && B.op === op ? ' sel' : ''}" data-op="${op}">${ic(icon)}<span>${escapeHtml(t('opb.' + op))}</span></button>`).join('');
+  return `<div class="svc has-ops${sel ? ' sel' : ''}" data-svc="${d.k}">
+      <button type="button" class="svc-main" aria-pressed="${sel}"><span class="svc-art">${art}</span>${name}${badge}</button>
+      <div class="svc-ops">${ops}</div>
+    </div>`;
 }
 function renderTiles() {
   const counts = {};
   cart.lines.forEach(l => { counts[l.svc] = (counts[l.svc] || 0) + 1; });
-  const shown = SVC_DEFS.filter(tileMatches);
-  $('svcGrid').innerHTML = shown.map(d => {
-    const paper = d.cat === 'print';
-    const n = counts[d.k] || 0;
-    return `<button type="button" class="svc${B.svc === d.k ? ' sel' : ''}" data-svc="${d.k}" aria-pressed="${B.svc === d.k}" style="--c1:${d.c[0]};--c2:${d.c[1]}">
-      <span class="svc-art">${paper ? `<span class="svc-mark">${d.k}</span>` : ''}<span class="svc-ic">${ic(d.icon) || ic('file')}</span></span>
-      <span class="svc-body"><span class="svc-name">${escapeHtml(svcLabel(d.k))}</span><span class="svc-sub">${escapeHtml(t('svcsub.' + d.k))}</span></span>
-      ${n ? `<span class="svc-badge">${n}</span>` : ''}
-    </button>`;
+  $('svcGrid').innerHTML = TILE_SECTIONS.map(([cat, inSection]) => {
+    const defs = SVC_DEFS.filter(d => !d.hidden && inSection(d));
+    return `<section class="svc-sec"><h2 class="sec-title">${escapeHtml(t('cat.' + cat))}</h2>
+      <div class="svc-grid${cat === 'print' ? '' : ' small'}">${defs.map(d => tileHtml(d, counts[d.k] || 0)).join('')}</div></section>`;
   }).join('');
-  $('svcNone').hidden = shown.length > 0;
 }
-$('svcCats').addEventListener('click', e => {
-  const b = e.target.closest('.cat-tab'); if (!b) return;
-  TILES.cat = b.dataset.cat;
-  qsa('#svcCats .cat-tab').forEach(x => x.classList.toggle('active', x === b));
-  renderTiles();
-});
-$('svcSearch').addEventListener('input', () => { TILES.q = $('svcSearch').value; renderTiles(); });
-/* Enter in the search box opens the first matching service */
-$('svcSearch').addEventListener('keydown', e => {
-  if (e.key !== 'Enter' || e.isComposing) return;
-  e.preventDefault();
-  const first = SVC_DEFS.find(tileMatches);
-  if (first) selectSvc(first.k);
+
+/* Pricing: one switch on the page decides whether a price is per piece or the total for all pieces */
+const pricing = { total: false };
+try { pricing.total = localStorage.getItem('pz_beta_total') === '1'; } catch (e) { /* private mode */ }
+$('totalPricing').checked = pricing.total;
+$('totalPricing').addEventListener('change', () => {
+  pricing.total = $('totalPricing').checked;
+  try { localStorage.setItem('pz_beta_total', pricing.total ? '1' : '0'); } catch (e) { /* private mode */ }
 });
 
 /* ---------- builder ---------- */
@@ -130,7 +124,6 @@ function fillDescList() {
 }
 function updateBuilder(opts = {}) {
   const has = !!B.svc, paper = isPaperSvc(B.svc), eng = B.svc === 'eng', qtyless = bQtyless();
-  qsa('#svcGrid .svc').forEach(b => { const on = b.dataset.svc === B.svc; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); });
   $('builder').hidden = !has;
   $('sheetBackdrop').hidden = !has;
   document.body.classList.toggle('sheet-open', has);
@@ -144,21 +137,16 @@ function updateBuilder(opts = {}) {
   $('paperOpts').hidden = !paper;
   if (paper) {
     setSeg('segOp', B.op); setSeg('segColor', B.color); setSeg('segFace', B.face); setSeg('segFinish', B.finish);
-    setSeg('segEngPm', B.engPerMeter ? 'meter' : 'fixed');
-    $('optColor').hidden = $('optFace').hidden = $('optFinish').hidden = B.op === 'scan';
-    $('optEngPm').hidden = !eng;
+    $('optColor').hidden = $('optFace').hidden = $('optFinish').hidden = B.op === 'scan' || eng;
   }
-  $('fDesc').hidden = !has || paper;
-  if (has && !paper) {
+  // plain items (contract, power of attorney, writing) take no description
+  $('fDesc').hidden = !has || paper || !!SVC_DEF[B.svc].plain;
+  if (!$('fDesc').hidden) {
     $('bDescLabel').textContent = B.svc === 'custom' ? t('custom.name') : CATALOG_SVCS.includes(B.svc) ? t('b.item') : t('desc.optional');
     fillDescList();
   }
-  $('fLength').hidden = !eng;
-  $('fEngNote').hidden = !eng;
   $('fQty').hidden = qtyless;
-  $('fFinal').hidden = qtyless;
-  if (qtyless) $('bFinal').checked = false;
-  $('bPriceLabel').textContent = eng && B.engPerMeter ? t('price.meter') : qtyless ? t('price.job') : $('bFinal').checked ? t('price.total') : t('price.unit');
+  $('bPriceLabel').textContent = qtyless ? t('price.job') : B.final ? t('price.total') : t('price.unit');
   $('builderTitle').textContent = has ? (B.editLineId ? t('b.edit') + ' · ' : '') + svcLabel(B.svc) : '';
   $('bAddLabel').textContent = t(B.editLineId ? 'b.update' : 'add');
   if (!opts.keepPrice) prefillPrice();
@@ -177,26 +165,24 @@ function refreshBuilderState() {
   const it = buildItem();
   const err = builderError(it);
   $('bLineTotal').textContent = fmtMoney(it.total);
-  $('bAdd').disabled = !!err;
+  $('bAdd').disabled = $('bAddSave').disabled = !!err;
   $('bHint').textContent = err ? t(err) + ' · ' : '';
   $('bPriceHint').textContent = B.priceAuto && $('bPrice').value ? t('b.lastPrice') : '';
 }
 function clearFields() {
-  ['bDesc', 'bLength', 'bEngNote', 'bQty', 'bPrice'].forEach(id => { $(id).value = ''; });
-  $('bFinal').checked = false;
+  ['bDesc', 'bQty', 'bPrice'].forEach(id => { $(id).value = ''; });
   B.priceAuto = false;
 }
 function resetBuilder() { B.svc = null; B.editLineId = null; clearFields(); updateBuilder(); renderCart(); }
-function selectSvc(svc) {
-  if (B.svc !== svc || B.editLineId) {
-    B.svc = svc;
-    B.editLineId = null;
-    if (isPaperSvc(svc)) { B.op = 'print'; B.color = 'black'; B.face = 'one'; B.finish = 'normal'; }
-    clearFields();
-    updateBuilder();
-    renderCart();
-  }
-  scrollToBuilder();
+/* A tile opens its service; a Print / Copy / Scan button on a paper tile also picks the operation */
+function selectSvc(svc, op) {
+  B.svc = svc;
+  B.editLineId = null;
+  B.final = pricing.total;
+  if (isPaperSvc(svc)) { B.op = op || 'print'; B.color = 'black'; B.face = 'one'; B.finish = 'normal'; }
+  clearFields();
+  updateBuilder();
+  renderCart();
   focusPrice();
 }
 /* priceIsSuggestion: true when loading a quick pick, so option changes can still re-suggest the price */
@@ -208,14 +194,13 @@ function loadIntoBuilder(it, lineId, priceIsSuggestion) {
     B.color = it.color && it.color !== '—' ? it.color : 'black';
     B.face = it.face && it.face !== '—' ? it.face : 'one';
     B.finish = it.finish && it.finish !== '—' ? it.finish : 'normal';
-    if (it.svc === 'eng') B.engPerMeter = !!it.engPerMeter;
   }
   $('bDesc').value = it.desc || '';
-  $('bLength').value = it.engLength > 0 ? it.engLength : '';
-  $('bEngNote').value = it.engNote || '';
   $('bQty').value = !it.noQty && it.qty > 1 ? it.qty : '';
-  $('bFinal').checked = !!it.isFinal;
-  $('bPrice').value = it.price > 0 ? it.price : '';
+  B.final = !!it.isFinal; // an edited line keeps its own pricing
+  // an older engineering line priced per meter comes back as its job total
+  const price = it.svc === 'eng' && it.engPerMeter ? it.total : it.price;
+  $('bPrice').value = price > 0 ? price : '';
   B.priceAuto = !!priceIsSuggestion && it.price > 0;
   updateBuilder({ keepPrice: true });
 }
@@ -226,17 +211,11 @@ function focusPrice() {
   el.focus({ preventScroll: true });
   el.select();
 }
-/* Phones and narrow tablets show the builder as a bottom sheet */
-const isSheet = () => matchMedia('(max-width:859px)').matches;
-function scrollToBuilder() {
-  if (isSheet()) return;
-  const r = $('builder').getBoundingClientRect();
-  if (r.bottom > innerHeight - 8 || r.top < 70) $('builder').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
+/* Adds the item and closes the builder; returns whether an item was added */
 function addFromBuilder() {
-  if (!B.svc) return;
+  if (!B.svc) return false;
   const it = buildItem();
-  if (builderError(it)) return;
+  if (builderError(it)) return false;
   if (B.editLineId) {
     const id = B.editLineId;
     const i = cart.lines.findIndex(l => l.id === id);
@@ -246,10 +225,10 @@ function addFromBuilder() {
   } else addLine(it);
   if (CATALOG_SVCS.includes(it.svc) && it.desc) rememberCatalog(it.svc, it.desc);
   clearFields();
-  // phones close the sheet to show the order; larger screens keep the service open for the next similar item
-  if (isSheet()) { B.svc = null; updateBuilder(); renderTiles(); return; }
+  B.svc = null;
   updateBuilder();
-  focusPrice();
+  renderTiles();
+  return true;
 }
 function rememberCatalog(svc, name) {
   const cat = { books: [], office: [], ...(state.catalog || {}) };
@@ -270,26 +249,30 @@ onSeg('segOp', v => { B.op = v; });
 onSeg('segColor', v => { B.color = v; });
 onSeg('segFace', v => { B.face = v; });
 onSeg('segFinish', v => { B.finish = v; });
-onSeg('segEngPm', v => { B.engPerMeter = v === 'meter'; });
-$('svcGrid').addEventListener('click', e => { const b = e.target.closest('.svc'); if (b) selectSvc(b.dataset.svc); });
+$('svcGrid').addEventListener('click', e => {
+  const tile = e.target.closest('.svc'); if (!tile) return;
+  const op = e.target.closest('[data-op]');
+  if (op || e.target.closest('.svc-main')) selectSvc(tile.dataset.svc, op ? op.dataset.op : null);
+});
 $('sheetBackdrop').addEventListener('click', resetBuilder);
 $('bPrice').addEventListener('input', () => { B.priceAuto = false; refreshBuilderState(); });
-['bQty', 'bLength', 'bEngNote'].forEach(id => $(id).addEventListener('input', refreshBuilderState));
+$('bQty').addEventListener('input', refreshBuilderState);
 $('bDesc').addEventListener('input', () => { prefillPrice(); refreshBuilderState(); });
-$('bFinal').addEventListener('change', () => updateBuilder());
 $('qtyInc').addEventListener('click', () => { $('bQty').value = readQty() + 1; refreshBuilderState(); });
 $('qtyDec').addEventListener('click', () => { const q = readQty(); $('bQty').value = q > 2 ? q - 1 : ''; refreshBuilderState(); });
 $('bReset').addEventListener('click', resetBuilder);
 $('bAdd').addEventListener('click', addFromBuilder);
+/* one step: add the item and place the order (the client name is optional) */
+$('bAddSave').addEventListener('click', () => { if (addFromBuilder()) saveTx(); });
 /* Enter walks price → quantity → any required field still empty, then adds the item */
-const requiredEmpty = el => isVisible(el) && !el.value && (el.id === 'bLength' || (el.id === 'bDesc' && (CATALOG_SVCS.includes(B.svc) || B.svc === 'custom')));
-['bDesc', 'bLength', 'bQty', 'bPrice', 'bEngNote'].forEach(id => $(id).addEventListener('keydown', e => {
+const requiredEmpty = el => isVisible(el) && !el.value && el.id === 'bDesc' && (CATALOG_SVCS.includes(B.svc) || B.svc === 'custom');
+['bDesc', 'bQty', 'bPrice'].forEach(id => $(id).addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
   e.preventDefault();
   if (e.ctrlKey || e.metaKey) return; // Ctrl+Enter is handled below (add + save)
   let next = null;
   if (e.target.id === 'bPrice' && isVisible($('bQty')) && $('bPrice').value) next = $('bQty');
-  if (!next) next = ['bPrice', 'bLength', 'bDesc'].map($).find(el => el !== e.target && (el.id === 'bPrice' ? isVisible(el) && !el.value : requiredEmpty(el)));
+  if (!next) next = ['bPrice', 'bDesc'].map($).find(el => el !== e.target && (el.id === 'bPrice' ? isVisible(el) && !el.value : requiredEmpty(el)));
   if (next) { next.focus(); if (next.select) next.select(); return; }
   if (!$('bAdd').disabled) addFromBuilder();
 }));
@@ -309,7 +292,6 @@ function lineSub(l) {
   const bits = [];
   if (l.svc === 'eng') {
     if (l.engLength > 0) bits.push(l.engLength + ' ' + t('eng.m') + (l.engPerMeter ? ' × ' + fmtNum(l.price) : ''));
-    else if (!l.engPerMeter) bits.push(t('eng.fixed'));
     if (l.engNote) bits.push(l.engNote);
   } else if (l.isFinal) bits.push(l.qty + ' · ' + t('inv.final'));
   else if (!l.noQty) bits.push(l.qty + ' × ' + fmtNum(l.price));
@@ -355,7 +337,7 @@ $('cartLines').addEventListener('click', e => {
   if (act === 'inc') { l.qty++; l.total = round2(l.qty * l.price); renderCart(); }
   else if (act === 'dec') { if (l.qty > 1) { l.qty--; l.total = round2(l.qty * l.price); renderCart(); } else removeLine(i); }
   else if (act === 'del') removeLine(i);
-  else if (act === 'edit') { loadIntoBuilder(l, l.id, false); renderCart(); scrollToBuilder(); focusPrice(); }
+  else if (act === 'edit') { loadIntoBuilder(l, l.id, false); renderCart(); focusPrice(); }
 });
 $('cartClear').addEventListener('click', () => {
   if (cart.editingTx) { resetCart(); return; }
@@ -470,7 +452,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     if (B.svc && !$('bAdd').disabled) addFromBuilder();
-    if (B.svc && isSheet()) resetBuilder();
+    if (B.svc) resetBuilder();
     saveTx();
   } else if (e.key === 'Escape' && B.svc) resetBuilder();
 });

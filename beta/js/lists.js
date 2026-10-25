@@ -53,6 +53,7 @@ function txCard(tx) {
   const meta = [tx.createdAt ? fmtTime(tx.createdAt) : '', unpaid ? '' : payLabel(tx)].filter(Boolean).join(' · ');
   return `<article class="tx${tx.mistake ? ' mistake' : ''}${open ? ' open' : ''}" data-id="${escapeHtml(tx.id)}">
     <button type="button" class="tx-row" data-act="toggle" aria-expanded="${open}">
+      <span class="tx-ic doc${unpaid ? ' due' : ''}">${ic('file-text')}</span>
       <span class="tx-main"><span class="tx-client">${escapeHtml(tx.client || '')}${badges}</span><span class="tx-items">${escapeHtml(txSummary(tx))}</span></span>
       <span class="tx-side"><span class="tx-total">${fmtNum(tx.total || 0)}</span><span class="tx-meta">${escapeHtml(meta)}</span></span>
     </button>
@@ -145,6 +146,7 @@ function renderUnpaid() {
     const age = days <= 0 ? t('unpaid.today') : t('unpaid.daysAgo', { n: days });
     return `<article class="tx" data-id="${escapeHtml(tx.id)}">
       <div class="tx-row static">
+        <span class="tx-ic doc due">${ic('file-text')}</span>
         <span class="tx-main"><span class="tx-client">${escapeHtml(tx.client || '')}</span><span class="tx-items">${escapeHtml(txSummary(tx))}</span><span class="tx-meta">${escapeHtml(fmtDate(tx.date))} · ${escapeHtml(age)}</span></span>
         <span class="tx-side"><span class="tx-total">${fmtNum(tx.total || 0)}</span><button type="button" class="btn btn-sm btn-save" data-act="paid">${ic('check')}${t('unpaid.markPaid')}</button></span>
       </div>

@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#2363c7">
 <title>Print Zone Beta</title>
-<link rel="icon" href="../Logo.png">
+<link rel="icon" href="../logo-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/lucide@0.378.0/dist/umd/lucide.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/beta.css?v=2">
+<link rel="stylesheet" href="css/beta.css?v=7">
 </head>
 <body>
 
 <!-- ==================== LOADING ==================== -->
 <div id="loadingView" class="loading">
-  <img src="../Logo.png" alt="" class="loading-logo">
-  <div class="loading-name">Print Zone <span class="beta-tag">BETA</span></div>
+  <span class="logo loading-logo" aria-hidden="true"></span>
+  <div class="loading-name">Print Zone <span class="brand-caption">Beta</span></div>
   <div class="spinner"></div>
   <div class="loading-status" id="loadingStatus"></div>
 </div>
@@ -32,8 +32,8 @@
       <button class="icon-btn" id="langLogin" type="button"></button>
       <button class="icon-btn theme-btn" id="themeLogin" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
     </div>
-    <img src="../Logo.png" alt="Print Zone" class="login-logo">
-    <h1 class="login-name">Print Zone <span class="beta-tag">BETA</span></h1>
+    <span class="logo login-logo" role="img" aria-label="Print Zone"></span>
+    <h1 class="login-name">Print Zone <span class="brand-caption">Beta</span></h1>
     <p class="login-tag" data-i18n="app.tag"></p>
     <div class="role-grid">
       <button class="role-card" id="roleEmployee" type="button"><i data-lucide="user"></i><strong data-i18n="login.employee"></strong><span data-i18n="login.employeeSub"></span></button>
@@ -52,51 +52,73 @@
 
 <!-- ==================== APP ==================== -->
 <div id="appView" hidden>
+ <div class="frame">
   <header class="topbar">
-    <div class="brand">
-      <img src="../Logo.png" alt="" class="brand-logo">
-      <div class="brand-txt">
-        <span class="brand-name">Print Zone <span class="beta-tag">BETA</span></span>
-        <span class="clock" id="clock"></span>
+    <button class="top-ic menu-btn" id="navToggle" type="button" data-i18n-title="nav.toggle"><i data-lucide="menu"></i></button>
+    <a class="brand" href="./" id="brandHome">
+      <span class="logo brand-logo" aria-hidden="true"></span>
+      <span class="brand-name">Print Zone</span>
+      <span class="brand-caption">Beta</span>
+    </a>
+    <div class="top-tools">
+      <button class="top-ic" id="bellBtn" type="button" data-i18n-title="nav.unpaid"><i data-lucide="bell"></i><b class="bell-dot" id="bellDot" hidden></b></button>
+      <button class="top-ic lang-btn" id="langBtn" type="button"></button>
+      <button class="top-ic theme-btn" id="themeBtn" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
+      <div class="user">
+        <button class="user-btn" id="userBtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="user-name" id="rolePill"></span>
+          <span class="avatar"><span id="avatarTxt"></span><i class="conn-dot"></i></span>
+        </button>
+        <div class="user-menu" id="userMenu" hidden>
+          <div class="um-head"><span class="avatar lg"><span id="umInitial"></span></span><span class="um-who"><b id="umRole"></b><span id="navVer"></span></span></div>
+          <div class="um-status"><i class="conn-dot"></i><span id="connTxt"></span></div>
+          <a class="um-item" href="../"><i data-lucide="external-link"></i><span data-i18n="beta.classic"></span></a>
+          <button class="um-item danger" id="logoutBtn" type="button"><i data-lucide="log-out"></i><span data-i18n="logout"></span></button>
+        </div>
       </div>
     </div>
-    <nav class="nav" id="nav">
-      <button type="button" class="nav-item active" data-page="pageNew"><i data-lucide="layout-grid"></i><span data-i18n="nav.new"></span></button>
-      <button type="button" class="nav-item" data-page="pageHistory"><i data-lucide="receipt-text"></i><span data-i18n="nav.history"></span></button>
+  </header>
+
+  <div class="shell">
+  <nav class="sidebar" id="nav">
+    <div class="side-top">
+      <button type="button" class="side-toggle" id="navCollapse" data-i18n-title="nav.toggle"><span class="i-close"><i data-lucide="panel-left-close"></i></span><span class="i-open"><i data-lucide="panel-left-open"></i></span></button>
+    </div>
+    <div class="nav-list">
+      <button type="button" class="nav-item active" data-page="pageNew"><i data-lucide="layout-grid"></i><span data-i18n="page.new"></span></button>
+      <button type="button" class="nav-item" data-page="pageHistory"><i data-lucide="clock-3"></i><span data-i18n="nav.history"></span></button>
       <button type="button" class="nav-item" data-page="pageUnpaid"><i data-lucide="hourglass"></i><span data-i18n="nav.unpaid"></span><b class="nav-badge" id="unpaidBadge" hidden></b></button>
       <button type="button" class="nav-item" data-page="pageExpenses"><i data-lucide="wallet"></i><span data-i18n="nav.expenses"></span></button>
       <button type="button" class="nav-item" data-page="pageMachines"><i data-lucide="printer"></i><span data-i18n="nav.machines"></span></button>
       <button type="button" class="nav-item admin-only" data-page="pageDashboard"><i data-lucide="bar-chart-3"></i><span data-i18n="nav.dashboard"></span></button>
       <button type="button" class="nav-item admin-only" data-page="pageSettings"><i data-lucide="settings"></i><span data-i18n="nav.settings"></span></button>
-    </nav>
-    <div class="top-tools">
-      <span class="conn" id="connPill"><span class="dot"></span><span id="connTxt"></span></span>
-      <span class="role-pill" id="rolePill"></span>
-      <a class="icon-btn" href="../" id="classicLink" data-i18n-title="beta.classic"><i data-lucide="external-link"></i></a>
-      <button class="icon-btn" id="langBtn" type="button"></button>
-      <button class="icon-btn theme-btn" id="themeBtn" type="button" data-i18n-title="theme"><span class="i-light"><i data-lucide="moon"></i></span><span class="i-dark"><i data-lucide="sun"></i></span></button>
-      <button class="icon-btn power" id="logoutBtn" type="button" data-i18n-title="logout"><i data-lucide="power"></i></button>
     </div>
-  </header>
+    <div class="side-stats">
+      <p class="side-title"><span data-i18n="side.today"></span></p>
+      <div class="stat">
+        <div class="stat-top"><i data-lucide="receipt-text"></i><span data-i18n="side.orders"></span><b id="ssOrders"></b></div>
+        <div class="stat-bar"><i id="ssOrdersBar"></i></div>
+        <small id="ssOrdersSub"></small>
+      </div>
+      <a class="side-link" href="../"><span data-i18n="beta.classic"></span><i data-lucide="arrow-up-right"></i></a>
+    </div>
+  </nav>
+  <div class="nav-backdrop" id="navBackdrop" hidden></div>
 
-  <main class="main">
+  <main class="main" id="main">
+    <div class="page-top">
+      <h1 class="page-title" id="pageTitle"></h1>
+      <span class="page-icon" id="pageIcon"></span>
+      <div class="page-tools">
+        <label class="switch" data-i18n-title="b.isTotal"><input type="checkbox" id="totalPricing"><span class="switch-track" aria-hidden="true"></span><span data-i18n="pricing.total"></span></label>
+        <span class="clock-pill"><i data-lucide="calendar-days"></i><span id="clock"></span></span></div>
+    </div>
 
     <!-- ========== NEW TRANSACTION ========== -->
     <section class="page active" id="pageNew">
       <div class="pos">
         <div class="pos-left">
-          <div class="catalog-bar">
-            <label class="search"><i data-lucide="search"></i><input id="svcSearch" type="search" autocomplete="off" data-i18n-ph="cat.search"></label>
-            <div class="cat-tabs" id="svcCats">
-              <button type="button" class="cat-tab active" data-cat="all"><i data-lucide="layout-grid"></i><span data-i18n="cat.all"></span></button>
-              <button type="button" class="cat-tab" data-cat="print"><i data-lucide="printer"></i><span data-i18n="cat.print"></span></button>
-              <button type="button" class="cat-tab" data-cat="eng"><i data-lucide="ruler"></i><span data-i18n="cat.eng"></span></button>
-              <button type="button" class="cat-tab" data-cat="shop"><i data-lucide="shopping-bag"></i><span data-i18n="cat.shop"></span></button>
-              <button type="button" class="cat-tab" data-cat="extra"><i data-lucide="sparkles"></i><span data-i18n="cat.extra"></span></button>
-            </div>
-          </div>
-          <div class="svc-grid" id="svcGrid"></div>
-          <p class="builder-empty" id="svcNone" hidden data-i18n="cat.none"></p>
+          <div class="svc-area" id="svcGrid"></div>
 
           <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
           <div class="panel builder" id="builder" hidden>
@@ -132,12 +154,6 @@
                   <button type="button" data-v="glossy"><i data-lucide="sparkles"></i><span data-val-label="glossy"></span></button>
                 </div>
               </div>
-              <div class="opt" id="optEngPm"><span class="opt-label" data-i18n="eng.pricing"></span>
-                <div class="seg" id="segEngPm">
-                  <button type="button" data-v="meter"><span data-i18n="eng.perMeter"></span></button>
-                  <button type="button" data-v="fixed"><span data-i18n="eng.fixed"></span></button>
-                </div>
-              </div>
             </div>
 
             <div class="fields" id="bFields">
@@ -145,14 +161,14 @@
               <div class="field" id="fQty"><label for="bQty" data-i18n="qty"></label>
                 <div class="stepper"><button type="button" class="step" id="qtyDec" aria-label="-"><i data-lucide="minus"></i></button><input id="bQty" type="number" inputmode="numeric" min="1" placeholder="1"><button type="button" class="step" id="qtyInc" aria-label="+"><i data-lucide="plus"></i></button></div>
               </div>
-              <div class="field" id="fLength"><label for="bLength" data-i18n="eng.length"></label><input id="bLength" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
               <div class="field grow" id="fDesc"><label for="bDesc" id="bDescLabel"></label><input id="bDesc" list="descList" autocomplete="off"><datalist id="descList"></datalist></div>
-              <div class="field grow" id="fEngNote"><label for="bEngNote" data-i18n="eng.note"></label><input id="bEngNote" autocomplete="off" data-i18n-ph="eng.notePh"></div>
             </div>
             <div class="builder-foot">
-              <label class="check" id="fFinal"><input type="checkbox" id="bFinal"><span data-i18n="b.isTotal"></span></label>
               <div class="line-preview"><span class="muted" id="bHint"></span><span data-i18n="b.lineTotal"></span> <strong id="bLineTotal">0.00</strong></div>
-              <button type="button" class="btn btn-primary btn-add" id="bAdd" disabled><i data-lucide="plus"></i><span id="bAddLabel" data-i18n="add"></span><kbd class="desk">↵</kbd></button>
+            </div>
+            <div class="builder-actions">
+              <button type="button" class="btn btn-ghost btn-add" id="bAdd" disabled><i data-lucide="plus"></i><span id="bAddLabel" data-i18n="add"></span><kbd class="desk">↵</kbd></button>
+              <button type="button" class="btn btn-ink btn-add" id="bAddSave" disabled><i data-lucide="check"></i><span data-i18n="b.addSave"></span><kbd class="desk">Ctrl ↵</kbd></button>
             </div>
           </div>
         </div>
@@ -187,7 +203,7 @@
                 <button type="button" class="pchip" data-pay="other"><i data-lucide="more-horizontal"></i><span data-pay-label="other"></span></button>
               </div>
               <input id="payOther" hidden autocomplete="off" data-i18n-ph="pay.otherPh">
-              <button type="button" class="btn btn-place btn-block" id="btnSave" disabled><i data-lucide="check"></i><span id="btnSaveLabel" data-i18n="save.tx"></span><kbd class="desk">Ctrl ↵</kbd></button>
+              <button type="button" class="btn btn-ink btn-place btn-block" id="btnSave" disabled><i data-lucide="check"></i><span id="btnSaveLabel" data-i18n="save.tx"></span><kbd class="desk">Ctrl ↵</kbd></button>
             </div>
           </div>
         </aside>
@@ -196,7 +212,6 @@
 
     <!-- ========== HISTORY ========== -->
     <section class="page" id="pageHistory">
-      <div class="page-head"><h1><i data-lucide="history"></i> <span data-i18n="hist.title"></span></h1></div>
       <div class="toolbar">
         <label class="search"><i data-lucide="search"></i><input id="hSearch" type="search" autocomplete="off" data-i18n-ph="hist.search"></label>
         <div class="chips" id="hRange">
@@ -217,14 +232,12 @@
 
     <!-- ========== UNPAID ========== -->
     <section class="page" id="pageUnpaid">
-      <div class="page-head"><h1><i data-lucide="clock"></i> <span data-i18n="unpaid.title"></span></h1></div>
       <div class="summary danger" id="uSummary"></div>
       <div id="uList"></div>
     </section>
 
     <!-- ========== OPERATIONAL COSTS ========== -->
     <section class="page" id="pageExpenses">
-      <div class="page-head"><h1><i data-lucide="wallet"></i> <span data-i18n="oc.title"></span></h1></div>
       <div class="split">
         <div class="panel">
           <h2 class="panel-title" data-i18n="oc.new"></h2>
@@ -259,13 +272,11 @@
 
     <!-- ========== MACHINES ========== -->
     <section class="page" id="pageMachines">
-      <div class="page-head"><h1><i data-lucide="printer"></i> <span data-i18n="mach.title"></span></h1></div>
       <div class="mach-grid" id="machList"></div>
     </section>
 
     <!-- ========== DASHBOARD (admin) ========== -->
     <section class="page" id="pageDashboard">
-      <div class="page-head"><h1><i data-lucide="bar-chart-3"></i> <span data-i18n="dash.title"></span></h1></div>
       <div class="filter-row">
         <div class="chips" id="dRange">
           <button type="button" class="chip active" data-range="today" data-i18n="range.today"></button>
@@ -294,7 +305,6 @@
 
     <!-- ========== SETTINGS (admin) ========== -->
     <section class="page" id="pageSettings">
-      <div class="page-head"><h1><i data-lucide="settings"></i> <span data-i18n="set.title"></span></h1></div>
       <div class="settings-grid">
         <div class="panel">
           <h2 class="panel-title"><i data-lucide="download"></i> <span data-i18n="exp.title"></span></h2>
@@ -345,10 +355,20 @@
           </div>
         </div>
 
-        <div class="panel">
+        <!-- product lists fed the old Stationery / Office supplies cards, which are gone since v2.5 -->
+        <div class="panel" hidden>
           <h2 class="panel-title"><i data-lucide="tags"></i> <span data-i18n="cat.title"></span></h2>
           <p class="muted small" data-i18n="cat.desc"></p>
           <div id="catEditor"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i data-lucide="palette"></i> <span data-i18n="th.title"></span></h2>
+          <p class="muted small" data-i18n="th.desc"></p>
+          <h3 class="th-sub"><i data-lucide="sun"></i><span data-i18n="th.light"></span></h3>
+          <div class="dt-grid" id="lightThemes"></div>
+          <h3 class="th-sub"><i data-lucide="moon"></i><span data-i18n="th.dark"></span></h3>
+          <div class="dt-grid" id="darkThemes"></div>
         </div>
 
         <div class="panel">
@@ -360,11 +380,13 @@
       </div>
     </section>
   </main>
+  </div>
+ </div>
 
   <!-- shown on phones while the cart's Save button is scrolled out of view -->
   <div class="savebar" id="saveBar" hidden>
     <div class="savebar-info"><span id="sbCount"></span><strong id="sbTotal"></strong></div>
-    <button type="button" class="btn btn-place" id="sbSave"><i data-lucide="check"></i><span data-i18n="save.short"></span></button>
+    <button type="button" class="btn btn-ink" id="sbSave"><i data-lucide="check"></i><span data-i18n="save.short"></span></button>
   </div>
 </div>
 
@@ -403,11 +425,11 @@
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
 
-<script src="js/core.js?v=2"></script>
-<script src="js/pos.js?v=2"></script>
-<script src="js/lists.js?v=2"></script>
-<script src="js/dash.js?v=2"></script>
-<script src="js/settings.js?v=2"></script>
-<script src="js/boot.js?v=2"></script>
+<script src="js/core.js?v=7"></script>
+<script src="js/pos.js?v=7"></script>
+<script src="js/lists.js?v=7"></script>
+<script src="js/dash.js?v=7"></script>
+<script src="js/settings.js?v=7"></script>
+<script src="js/boot.js?v=7"></script>
 </body>
 </html>
