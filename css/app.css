@@ -377,7 +377,16 @@ html[lang=ar] .panel-title{font-size:.98rem}
   .pos-left{overflow-y:auto;scrollbar-width:thin;padding-inline-end:4px}
   .order{height:100%}
 }
-.svc-area{display:flex;flex-direction:column;gap:20px}
+.svc-area{display:flex;flex-direction:column;gap:20px;container-type:inline-size}
+/* Stationery and Services side by side when there is room (the query sits on the tiles area, not on .pos-left, so the fixed price dialog is not trapped) */
+.svc-band{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@container (min-width:560px){
+  .svc-band{grid-template-columns:minmax(230px,1fr) minmax(0,1.5fr)}
+  .svc-band .svc-grid.small{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* side by side, the Stationery card runs exactly as tall as the two rows of Services cards */
+.svc-band > .svc-sec{display:flex;flex-direction:column}
+.svc-band .svc-grid{flex:1}
 .svc-sec .sec-title{margin-bottom:4px}
 
 /* service tiles: folder cards */
@@ -395,7 +404,9 @@ html.dark .svc{--card-base:hsl(var(--h) 34% 20%);--card-hover:hsl(var(--h) 34% 2
 .svc[data-svc=writing]{--h:42}
 .svc[data-svc=wrap]{--h:234}
 .svc[data-svc=upload]{--h:200}
+.svc[data-svc=office]{--h:334}
 .svc[data-svc=custom]{--h:215;--s:14%}
+.svc.group{--h:150}
 .svc:hover{--card:var(--card-hover);filter:drop-shadow(0 8px 14px hsl(var(--h) var(--s) 40% / 14%))}
 .svc.sel{--card:var(--deep);filter:drop-shadow(0 12px 18px hsl(var(--h) var(--s) 35% / 32%))}
 .svc-main{position:relative;flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px 10px;text-align:start;min-width:0;width:100%;color:inherit;border-radius:inherit}
@@ -417,12 +428,29 @@ html[dir=rtl] .svc-sheet{border-radius:8px 2px 2px 2px}
 .svc-op:hover{background:var(--card-hover);color:var(--ink)}
 .svc-op.sel{background:var(--deep);color:#fff}
 .svc-op.sel svg.icon{color:#fff}
+/* the stationery card: one folder, a row per item; only the chosen row turns deep */
+.svc-grid.group-grid{grid-template-columns:minmax(0,1fr);padding-top:11px}
+.svc.group::before{width:44%;height:11px}
+.svc.group:hover{--card:var(--card-base)}
+.svc-rows{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px}
+.svc-row{position:relative;flex:1;display:flex;align-items:center;gap:12px;min-height:42px;padding:6px 10px;border-radius:10px;text-align:start;min-width:0;transition:background .12s}
+.svc-row:hover{background:var(--card-hover)}
+.svc-row .svc-ic{width:34px;height:34px}
+.svc-row .svc-ic svg.icon{width:17px;height:17px}
+.svc-row .svc-name{font-size:.95rem}
+.svc-row .svc-badge{position:static;margin-inline-start:auto;flex-shrink:0;min-width:24px;height:24px;line-height:24px;box-shadow:none}
+.svc-row.sel{background:var(--deep)}
+.svc-row.sel .svc-name{color:#fff}
+.svc-row.sel .svc-ic{color:var(--deep)}
+.svc-row.sel .svc-badge{background:#fff;color:var(--deep)}
+/* names in rows and small cards wrap to a second line rather than being cut */
+.svc-row .svc-name,.svc.small .svc-name{white-space:normal;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 /* small cards: icon and name only */
 .svc.small::before{width:44%;height:11px}
-.svc.small .svc-main{flex-direction:row;align-items:center;gap:12px;min-height:60px;padding:10px 14px}
-.svc.small .svc-ic{width:38px;height:38px}
-.svc.small .svc-ic svg.icon{width:19px;height:19px}
-.svc.small .svc-name{font-size:.95rem}
+.svc.small .svc-main{flex-direction:row;align-items:center;gap:10px;min-height:60px;padding:10px 12px}
+.svc.small .svc-ic{width:36px;height:36px}
+.svc.small .svc-ic svg.icon{width:18px;height:18px}
+.svc.small .svc-name{font-size:.93rem}
 .svc.small .svc-badge{position:static;margin-inline-start:auto;flex-shrink:0;min-width:24px;height:24px;line-height:24px;box-shadow:none}
 /* the open service, in its deeper shade */
 .svc.sel .svc-name{color:#fff}
@@ -567,6 +595,8 @@ html[dir=rtl] .savebar{padding:8px 18px 8px 8px}
   .svc-ops{padding:0 8px 8px}
   .svc.small .svc-main{min-height:48px;padding:6px 12px}
   .svc.small .svc-ic{width:32px;height:32px}
+  .svc-row{min-height:40px;padding:4px 10px}
+  .svc-row .svc-ic{width:30px;height:30px}
   .order-head{padding:10px 16px 8px}
   .order-fields{padding:0 16px 10px}
   .order-foot{gap:8px;padding:10px 16px 12px}

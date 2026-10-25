@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v3.0';
+const APP_VERSION = 'v3.1';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -140,7 +140,7 @@ const I18N = {
     'side.orders': 'Orders', 'side.ordersSub': 'Yesterday: {n}', 'opb.print': 'Print', 'opb.copy': 'Copy', 'opb.scan': 'Scan',
     'nav.toggle': 'Show / hide menu', 'nav.menu': 'Menu', 'nav.admin': 'Admin', 'nav.collapse': 'Collapse', 'dash.engJobs': 'Engineering jobs', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
     'b.title': 'Add an item', 'b.edit': 'Edit item', 'b.reset': 'Reset',
-    'b.item': 'Product', 'desc.optional': 'Description (optional)', 'custom.name': 'Service name',
+    'b.item': 'Product', 'b.itemOpt': 'Product (optional)', 'desc.optional': 'Description (optional)', 'custom.name': 'Service name',
     'b.isTotal': 'Price is the total for all pieces', 'b.lineTotal': 'Line total',
     'b.lastPrice': 'Last price used', 'b.update': 'Update', 'add': 'Add', 'b.editLine': 'Edit this item',
     'b.err.price': 'Enter a price', 'b.err.length': 'Enter the length', 'b.err.desc': 'Enter a name', 'b.err.qty': 'Quantity must be 1 or more',
@@ -265,7 +265,7 @@ const I18N = {
     'side.orders': 'الطلبات', 'side.ordersSub': 'أمس: {n}', 'opb.print': 'طباعة', 'opb.copy': 'تصوير', 'opb.scan': 'سكان',
     'nav.toggle': 'إظهار / إخفاء القائمة', 'nav.menu': 'القائمة', 'nav.admin': 'الإدارة', 'nav.collapse': 'تصغير', 'dash.engJobs': 'أعمال الهندسي', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
     'b.title': 'إضافة خدمة', 'b.edit': 'تعديل الخدمة', 'b.reset': 'مسح',
-    'b.item': 'المنتج', 'desc.optional': 'الوصف (اختياري)', 'custom.name': 'اسم الخدمة',
+    'b.item': 'المنتج', 'b.itemOpt': 'المنتج (اختياري)', 'desc.optional': 'الوصف (اختياري)', 'custom.name': 'اسم الخدمة',
     'b.isTotal': 'السعر هو الإجمالي لكل القطع', 'b.lineTotal': 'إجمالي البند',
     'b.lastPrice': 'آخر سعر مستخدم', 'b.update': 'تحديث', 'add': 'إضافة', 'b.editLine': 'تعديل هذا البند',
     'b.err.price': 'أدخل السعر', 'b.err.length': 'أدخل الطول', 'b.err.desc': 'أدخل الاسم', 'b.err.qty': 'الكمية 1 على الأقل',
@@ -400,10 +400,11 @@ const SVC_DEFS = [
   { k: 'writing', cat: 'shop', icon: 'pen-line', c: ['#eab308', '#a16207'], plain: true },
   // older stationery items: no tile any more, kept so saved orders still show their name and icon
   { k: 'books', cat: 'shop', icon: 'book-open', c: ['#10b981', '#047857'], hidden: true },
-  { k: 'office', cat: 'shop', icon: 'paperclip', c: ['#ec4899', '#9d174d'], hidden: true },
   { k: 'pads', cat: 'shop', icon: 'notebook-pen', c: ['#eab308', '#a16207'], hidden: true },
   { k: 'wrap', cat: 'extra', icon: 'layers', c: ['#6366f1', '#3730a3'] },
   { k: 'upload', cat: 'extra', icon: 'cloud-upload', c: ['#0ea5e9', '#075985'] },
+  // office supplies count as Stationery in reports but sit with the Services cards
+  { k: 'office', cat: 'shop', section: 'extra', icon: 'paperclip', c: ['#ec4899', '#9d174d'] },
   { k: 'custom', cat: 'extra', icon: 'wand-sparkles', c: ['#64748b', '#334155'] },
 ];
 const SVC_DEF = Object.fromEntries(SVC_DEFS.map(d => [d.k, d]));

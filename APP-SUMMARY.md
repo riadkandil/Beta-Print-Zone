@@ -2,11 +2,11 @@
 
 Transaction recorder for a print shop: printing, photocopying, scanning, engineering plans, stationery and other services. Staff record orders fast; the admin sees money, costs and trends.
 
-Print Zone **v3.0** (the former beta) is the main app. The classic app stays online as a fallback; both share **one Firebase database and one data format**, so anything recorded in one shows up in the other:
+Print Zone **v3.1** (the former beta) is the main app. The classic app stays online as a fallback; both share **one Firebase database and one data format**, so anything recorded in one shows up in the other:
 
 | Version | Path | Status |
 |---|---|---|
-| Print Zone (main) | `/` | v3.0 |
+| Print Zone (main) | `/` | v3.1 |
 | Classic (fallback) | `/classic/` | v1.12 |
 | Old beta links | `/beta/` | Redirect to `/` |
 
@@ -90,7 +90,7 @@ Colours were measured from the design image.
 
 - **Sidebar**: brand blue, 48px curve on its top inner corner, white text; the active page shows in pale blue (`#a6cdff`).
 - **Folder cards**: cards with a tab on the top edge that slopes down. Used for service tiles, the login role cards and the dashboard's headline figure.
-  - **Service cards** each have their own soft tint (blue A4, violet A3, teal A5, clay engineering, green contract, rose power of attorney, sand writing, indigo lamination, sky upload, grey other). The open service takes a deeper shade of its own tint.
+  - **Service cards** each have their own soft tint (blue A4, violet A3, teal A5, clay engineering, green stationery card, indigo lamination, sky upload, rose office supplies, grey other). The open service takes a deeper shade of its own tint.
   - Login cards are soft grey; the selected one turns solid blue.
 - **Buttons**: pill-shaped; main buttons are brand blue, secondary ones soft grey.
 - **Inputs**: soft-grey fill, 10px corners, blue ring on focus.
@@ -140,18 +140,19 @@ Validated for colour-blind safety in both themes:
 
 ### Service tiles
 
-Ten services in three groups on one screen, no tabs:
+Eleven services in three groups on one screen, no tabs:
 
 | Service | Category | Tile |
 |---|---|---|
 | A4, A3, A5 | Printing | Folder card, drawn as a paper sheet in real proportions + **Print / Copy / Scan** buttons |
 | Engineering | Printing | Folder card with a compass icon + **Print / Copy / Scan** buttons |
-| Contract (عقد), Power of Attorney (توكيل), Writing (كتابة) | Stationery | Small card: icon and name only |
-| Lamination, Electronic upload, Other service | Services | Small card: icon and name only |
+| Contract (عقد), Power of Attorney (توكيل), Writing (كتابة) | Stationery | **One card** with the three items as stacked rows, so full names fit |
+| Lamination, Electronic upload, Office supplies, Other service (always last) | Services | Small cards in a 2 × 2 grid, beside the Stationery card |
 
 - A tile shows a small count badge when that service is already in the current order.
 - Cards show only artwork/icon and name; the open service takes a deeper shade of its tint.
-- The old Stationery, Office supplies and Pads cards are gone; saved orders that used them still show their names. The Settings "Product lists" panel that fed them is hidden.
+- Long names wrap to a second line instead of being cut off.
+- The old Stationery (books) and Pads cards are gone; saved orders that used them still show their names. Office supplies came back in v3.1 under Services (it still counts as Stationery in the dashboard). The Settings "Product lists" panel stays hidden; past entries are still suggested.
 
 ### Price dialog (fast entry)
 
@@ -162,7 +163,7 @@ Ten services in three groups on one screen, no tabs:
   - Scans (A-sizes and engineering): price only, no quantity.
   - **Engineering print and copy: price first, then an optional quantity** (empty counts as 1; the total is price × quantity). No length and no colour.
   - Contract, Power of Attorney, Writing: price + optional quantity, nothing else.
-  - Lamination / Electronic upload: optional note + quantity + price. Other service: its name + quantity + price.
+  - Lamination / Electronic upload: optional note + quantity + price. Office supplies: optional product name (suggested from past entries) + quantity + price. Other service: its name (required) + quantity + price.
   - **Pricing**: one **Total price** switch beside the date on the New order page. Off = the price is per piece; on = the price is the total for all pieces. It is remembered on the device (`pz_beta_total`); editing a saved line keeps that line's own pricing.
 - **Keyboard**:
   - Enter walks from price to quantity to name, then adds the item.
@@ -309,6 +310,7 @@ One period filter controls everything on the page. The options are Today, Yester
   - "Total price" switch replaces the per-item checkbox.
 - **Beta v2.6**: six blue light themes next to the dark ones (Settings → Themes); glows and focus rings follow the chosen blue.
 - **v3.0**: the beta becomes the main app at `/`; "Beta" labels removed; the classic app moves to `/classic/`; `/beta/` redirects to `/`.
+- **v3.1**: Stationery as one card with stacked rows; Office supplies card back under Services; Other service last; long names wrap.
 
 ---
 

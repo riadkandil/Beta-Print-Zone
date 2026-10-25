@@ -40,7 +40,7 @@ function buildItem() {
   };
 }
 function builderError(it) {
-  if ((CATALOG_SVCS.includes(it.svc) || it.svc === 'custom') && !it.desc) return 'b.err.desc';
+  if (it.svc === 'custom' && !it.desc) return 'b.err.desc';
   if (!it.noQty && !(it.qty > 0)) return 'b.err.qty';
   if (!(it.price > 0)) return 'b.err.price';
   return null;
@@ -71,8 +71,10 @@ function suggestPrice(it) {
 
 /* ---------- service tiles ---------- */
 const PAPER_OPS = [['print', 'printer'], ['copy', 'copy'], ['scan', 'scan-line']];
-/* Three groups on one screen: paper services as folder cards with Print / Copy / Scan, the rest as small cards */
-const TILE_SECTIONS = [['print', d => isPaperSvc(d.k)], ['shop', d => d.cat === 'shop'], ['extra', d => d.cat === 'extra']];
+/* Three groups on one screen: paper services as folder cards with Print / Copy / Scan,
+   stationery as one card with a row per item, and the other services as small cards */
+const tileSection = d => isPaperSvc(d.k) ? 'print' : d.section || d.cat;
+const tileDefs = section => SVC_DEFS.filter(d => !d.hidden && tileSection(d) === section);
 function tileHtml(d, n) {
   const sel = B.svc === d.k;
   const badge = n ? `<span class="svc-badge">${n}</span>` : '';
@@ -87,14 +89,21 @@ function tileHtml(d, n) {
       <div class="svc-ops">${ops}</div>
     </div>`;
 }
+/* One folder card whose items are stacked rows, so long names fit */
+function groupHtml(defs, counts) {
+  const rows = defs.map(d => {
+    const sel = B.svc === d.k, n = counts[d.k] || 0;
+    return `<button type="button" class="svc-row${sel ? ' sel' : ''}" data-svc="${d.k}" aria-pressed="${sel}"><span class="svc-ic">${ic(d.icon) || ic('file')}</span><span class="svc-name">${escapeHtml(svcLabel(d.k))}</span>${n ? `<span class="svc-badge">${n}</span>` : ''}</button>`;
+  }).join('');
+  return `<div class="svc group"><div class="svc-rows">${rows}</div></div>`;
+}
 function renderTiles() {
   const counts = {};
   cart.lines.forEach(l => { counts[l.svc] = (counts[l.svc] || 0) + 1; });
-  $('svcGrid').innerHTML = TILE_SECTIONS.map(([cat, inSection]) => {
-    const defs = SVC_DEFS.filter(d => !d.hidden && inSection(d));
-    return `<section class="svc-sec"><h2 class="sec-title">${escapeHtml(t('cat.' + cat))}</h2>
-      <div class="svc-grid${cat === 'print' ? '' : ' small'}">${defs.map(d => tileHtml(d, counts[d.k] || 0)).join('')}</div></section>`;
-  }).join('');
+  const section = (cat, body) => `<section class="svc-sec"><h2 class="sec-title">${escapeHtml(t('cat.' + cat))}</h2>${body}</section>`;
+  const cards = (cat, cls) => `<div class="svc-grid${cls}">${tileDefs(cat).map(d => tileHtml(d, counts[d.k] || 0)).join('')}</div>`;
+  $('svcGrid').innerHTML = section('print', cards('print', ''))
+    + `<div class="svc-band">${section('shop', `<div class="svc-grid group-grid">${groupHtml(tileDefs('shop'), counts)}</div>`)}${section('extra', cards('extra', ' small'))}</div>`;
 }
 
 /* Pricing: one switch on the page decides whether a price is per piece or the total for all pieces */
@@ -142,7 +151,7 @@ function updateBuilder(opts = {}) {
   // plain items (contract, power of attorney, writing) take no description
   $('fDesc').hidden = !has || paper || !!SVC_DEF[B.svc].plain;
   if (!$('fDesc').hidden) {
-    $('bDescLabel').textContent = B.svc === 'custom' ? t('custom.name') : CATALOG_SVCS.includes(B.svc) ? t('b.item') : t('desc.optional');
+    $('bDescLabel').textContent = B.svc === 'custom' ? t('custom.name') : CATALOG_SVCS.includes(B.svc) ? t('b.itemOpt') : t('desc.optional');
     fillDescList();
   }
   $('fQty').hidden = qtyless;
@@ -250,9 +259,9 @@ onSeg('segColor', v => { B.color = v; });
 onSeg('segFace', v => { B.face = v; });
 onSeg('segFinish', v => { B.finish = v; });
 $('svcGrid').addEventListener('click', e => {
-  const tile = e.target.closest('.svc'); if (!tile) return;
+  const tile = e.target.closest('[data-svc]'); if (!tile) return;
   const op = e.target.closest('[data-op]');
-  if (op || e.target.closest('.svc-main')) selectSvc(tile.dataset.svc, op ? op.dataset.op : null);
+  if (op || e.target.closest('.svc-main, .svc-row')) selectSvc(tile.dataset.svc, op ? op.dataset.op : null);
 });
 $('sheetBackdrop').addEventListener('click', resetBuilder);
 $('bPrice').addEventListener('input', () => { B.priceAuto = false; refreshBuilderState(); });
@@ -265,7 +274,7 @@ $('bAdd').addEventListener('click', addFromBuilder);
 /* one step: add the item and place the order (the client name is optional) */
 $('bAddSave').addEventListener('click', () => { if (addFromBuilder()) saveTx(); });
 /* Enter walks price → quantity → any required field still empty, then adds the item */
-const requiredEmpty = el => isVisible(el) && !el.value && el.id === 'bDesc' && (CATALOG_SVCS.includes(B.svc) || B.svc === 'custom');
+const requiredEmpty = el => isVisible(el) && !el.value && el.id === 'bDesc' && B.svc === 'custom';
 ['bDesc', 'bQty', 'bPrice'].forEach(id => $(id).addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
   e.preventDefault();
