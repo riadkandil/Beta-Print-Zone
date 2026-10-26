@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="css/app.css?v=9">
+<link rel="stylesheet" href="css/app.css?v=10">
 </head>
 <body>
 
@@ -185,6 +185,7 @@
             <div class="order-fields">
               <label class="ifield"><i data-lucide="user-round"></i><input id="cClient" list="clientList" autocomplete="off" data-i18n-ph="newtx.clientPh"><datalist id="clientList"></datalist></label>
               <label class="ifield date"><i data-lucide="calendar"></i><input type="date" id="cDate"></label>
+              <label class="ifield time" id="cTimeWrap" hidden><i data-lucide="clock"></i><input type="time" id="cTime"></label>
             </div>
             <div class="cart-lines" id="cartLines"></div>
             <div class="order-foot">
@@ -231,6 +232,14 @@
 
     <!-- ========== UNPAID ========== -->
     <section class="page" id="pageUnpaid">
+      <div class="toolbar">
+        <label class="search"><i data-lucide="search"></i><input id="uSearch" type="search" autocomplete="off" data-i18n-ph="unpaid.search"></label>
+        <div class="chips" id="uView">
+          <button type="button" class="chip active" data-view="client"><i data-lucide="users"></i> <span data-i18n="unpaid.byClient"></span></button>
+          <button type="button" class="chip" data-view="order"><i data-lucide="list"></i> <span data-i18n="unpaid.byOrder"></span></button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm admin-only" id="uMerge"><i data-lucide="git-merge"></i><span data-i18n="merge.btn"></span></button>
+      </div>
       <div class="summary danger" id="uSummary"></div>
       <div id="uList"></div>
     </section>
@@ -287,19 +296,20 @@
         </div>
         <label class="date-pill" data-i18n-title="range.day"><i data-lucide="calendar"></i><input type="date" id="dDay"></label>
       </div>
-      <div class="kpis" id="dKpis"></div>
-      <div class="insights" id="dInsights"></div>
-      <div class="chart-grid">
-        <div class="panel chart-card wide" id="cTrend"></div>
-        <div class="panel chart-card" id="cMix"></div>
-        <div class="panel chart-card" id="cSvc"></div>
-        <div class="panel chart-card" id="cHeat"></div>
-        <div class="panel chart-card" id="cClients"></div>
-        <div class="panel chart-card" id="cPay"></div>
-        <div class="panel chart-card" id="cCosts"></div>
+      <div class="empty sm loading-note" id="dLoading" hidden><i data-lucide="loader"></i><p data-i18n="load.older"></p></div>
+      <div id="dBody">
+        <div class="kpis" id="dKpis"></div>
+        <div class="insights" id="dInsights"></div>
+        <div class="chart-grid">
+          <div class="panel chart-card wide" id="cTrend"></div>
+          <div class="panel chart-card wide" id="cDaily"></div>
+          <div class="panel chart-card wide" id="cSvcTree"></div>
+          <div class="panel chart-card" id="cMix"></div>
+          <div class="panel chart-card" id="cSvc"></div>
+          <div class="panel chart-card" id="cPay"></div>
+          <div class="panel chart-card" id="cCosts"></div>
+        </div>
       </div>
-      <h2 class="section-title" data-i18n="dash.longTerm"></h2>
-      <div class="panel chart-card" id="cMonths"></div>
     </section>
 
     <!-- ========== SETTINGS (admin) ========== -->
@@ -407,6 +417,11 @@
     <div class="modal-icon ok"><i data-lucide="check-circle"></i></div>
     <h3 id="payTitle" data-i18n="pay.dialogTitle"></h3>
     <p class="modal-sub" id="paySub"></p>
+    <div class="pay-fields">
+      <div class="field"><label for="payAmt" data-i18n="pay.amount"></label><input id="payAmt" type="number" inputmode="decimal" min="0" step="0.01"></div>
+      <div class="field" id="payDateWrap" hidden><label for="payDate" data-i18n="pay.date"></label><input id="payDate" type="date"></div>
+    </div>
+    <p class="pay-due"><span id="payDue"></span><span class="pay-err" id="payErr" role="alert"></span></p>
     <div class="pay-chips center" id="payDlgChips">
       <button type="button" class="pchip sel" data-pay="cash"><i data-lucide="banknote"></i><span data-pay-label="cash"></span></button>
       <button type="button" class="pchip" data-pay="instapay"><i data-lucide="smartphone"></i><span data-pay-label="instapay"></span></button>
@@ -421,14 +436,33 @@
   </div>
 </div>
 
+<div class="overlay" id="mergeOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mergeTitle">
+    <div class="modal-icon ok"><i data-lucide="git-merge"></i></div>
+    <h3 id="mergeTitle" data-i18n="merge.title"></h3>
+    <p class="modal-sub" data-i18n="merge.sub"></p>
+    <div class="merge-fields">
+      <div class="field"><label for="mergeFrom" data-i18n="merge.from"></label><input id="mergeFrom" list="mergeNames" autocomplete="off"></div>
+      <div class="field"><label for="mergeTo" data-i18n="merge.to"></label><input id="mergeTo" list="mergeNames" autocomplete="off"></div>
+      <datalist id="mergeNames"></datalist>
+    </div>
+    <p class="pay-err" id="mergeErr" role="alert"></p>
+    <div id="mergeList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="mergeNo" data-i18n="close"></button>
+      <button type="button" class="btn btn-save" id="mergeYes" data-i18n="merge.go"></button>
+    </div>
+  </div>
+</div>
+
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
 
-<script src="js/core.js?v=9"></script>
-<script src="js/pos.js?v=9"></script>
-<script src="js/lists.js?v=9"></script>
-<script src="js/dash.js?v=9"></script>
-<script src="js/settings.js?v=9"></script>
-<script src="js/boot.js?v=9"></script>
+<script src="js/core.js?v=10"></script>
+<script src="js/pos.js?v=10"></script>
+<script src="js/lists.js?v=10"></script>
+<script src="js/dash.js?v=10"></script>
+<script src="js/settings.js?v=10"></script>
+<script src="js/boot.js?v=10"></script>
 </body>
 </html>

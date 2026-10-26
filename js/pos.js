@@ -4,7 +4,7 @@ const PAPER = ['A4', 'A3', 'A5', 'eng'];
 const CATALOG_SVCS = ['books', 'office'];
 /* Builder selections. Options keep their values after an item is added, so the next similar item is one Enter away. */
 const B = { svc: null, op: 'print', color: 'black', face: 'one', finish: 'normal', final: false, priceAuto: false, editLineId: null };
-const cart = { lines: [], pay: 'cash', editingTx: null, dateTouched: false };
+const cart = { lines: [], pay: 'cash', editingTx: null, dateTouched: false, returnTo: null };
 let lineSeq = 0;
 const newLineId = () => 'l' + (++lineSeq);
 
@@ -362,23 +362,47 @@ function setPay(p) {
   cart.pay = p;
   qsa('#payChips .pchip').forEach(c => { const on = c.dataset.pay === p; c.classList.toggle('sel', on); c.setAttribute('aria-pressed', on); });
   $('payOther').hidden = p !== 'other';
+  // an unpaid order must say who owes it
+  $('cClient').dataset.i18nPh = p === 'notpaid' ? 'newtx.clientReq' : 'newtx.clientPh';
+  $('cClient').placeholder = t($('cClient').dataset.i18nPh);
+  if (p !== 'notpaid') $('cClient').parentElement.classList.remove('need');
 }
+$('cClient').addEventListener('input', () => $('cClient').parentElement.classList.remove('need'));
 $('payChips').addEventListener('click', e => { const c = e.target.closest('.pchip'); if (!c) return; setPay(c.dataset.pay); if (cart.pay === 'other') $('payOther').focus(); });
 $('noteToggle').addEventListener('click', () => { $('cNotes').hidden = false; $('cNotes').focus(); });
 $('cDate').addEventListener('input', () => { cart.dateTouched = true; });
 
+/* past names, newest first, one spelling per client so the list suggests the name already in use */
 const clientIndex = memoTx(() => {
-  const defaults = new Set([I18N.en['newtx.defaultClient'], I18N.ar['newtx.defaultClient']]);
-  const s = new Set();
-  for (const tx of liveTx()) { const c = (tx.client || '').trim(); if (c && !defaults.has(c)) s.add(c); if (s.size >= 300) break; }
-  return [...s];
+  const seen = new Set(), out = [];
+  for (const tx of liveTx()) {
+    const c = (tx.client || '').trim(), k = clientKey(c);
+    if (isDefaultClient(c) || seen.has(k)) continue;
+    seen.add(k); out.push(c);
+    if (out.length >= 300) break;
+  }
+  return out;
 });
 function fillClientList() { $('clientList').innerHTML = clientIndex().map(c => `<option value="${escapeHtml(c)}"></option>`).join(''); }
 
 /* ---------- save ---------- */
 let saving = false;
+/* Blocks the save with a hint on the client field (used when an unpaid order has no name) */
+function needClient() {
+  $('cClient').parentElement.classList.add('need');
+  $('cClient').focus();
+  toast(t('newtx.needClient'), { error: true, ms: 4000 });
+}
+/* The saved time of an order being edited: its date with the time typed in, or the old timestamp if neither changed */
+function editedCreatedAt(tx, date) {
+  const time = $('cTime').value;
+  if (!time || (date === tx.date && time === $('cTime').dataset.orig)) return tx.createdAt;
+  const d = new Date(date + 'T' + time);
+  return isNaN(d) ? tx.createdAt : d.toISOString();
+}
 async function saveTx() {
   if (!cart.lines.length || saving) return;
+  if (cart.pay === 'notpaid' && isDefaultClient($('cClient').value)) { needClient(); return; }
   saving = true;
   renderCart();
   const items = cart.lines.map(({ id, ...rest }) => rest);
@@ -396,8 +420,30 @@ async function saveTx() {
   };
   try {
     if (cart.editingTx) {
-      await commit(store.updateTx(cart.editingTx.id, { ...data, editedAt: new Date().toISOString(), editedBy: state.role }));
+      // work from the latest copy, so a payment recorded meanwhile is not lost
+      const cur = state.transactions.find(x => x.id === cart.editingTx.id) || cart.editingTx;
+      const now = new Date().toISOString();
+      data.createdAt = editedCreatedAt(cur, data.date);
+      if (!data.createdAt) delete data.createdAt;
+      const paid = cur.payMethod === 'notpaid' ? paymentsSum(cur) : 0;
+      if (data.payMethod === 'notpaid') {
+        if (cur.payMethod !== 'notpaid') Object.assign(data, { payments: [], paidAt: null });
+        else if (paid > total) { toast(t('edit.belowPaid', { n: fmtMoney(paid) }), { error: true, ms: 5000 }); return; }
+        else if (paid > 0 && paid === total) {
+          // the new total is exactly what was paid: the order is settled by its last payment
+          const last = cur.payments[cur.payments.length - 1];
+          Object.assign(data, { payMethod: last.method, payOther: last.other || null, paidAt: now });
+        }
+      } else if (cur.payMethod === 'notpaid') data.paidAt = now;
+      const entry = editEntry(cur, data, state.role);
+      if (entry) data.edits = [...(cur.edits || []), entry];
+      await commit(store.updateTx(cur.id, { ...data, editedAt: now, editedBy: state.role }));
       toast(t('toast.updated'));
+      const back = cart.returnTo;
+      saving = false;
+      resetCart();
+      if (back) go(back);
+      return;
     } else {
       const res = await commit(store.addTx({ ...data, createdAt: new Date().toISOString(), createdBy: state.role, deviceId: state.deviceId }));
       toast(res === 'queued' ? t('toast.savedQueued') : t('toast.saved') + ' · ' + fmtMoney(total));
@@ -416,14 +462,16 @@ $('btnSave').addEventListener('click', saveTx);
 $('sbSave').addEventListener('click', saveTx);
 
 function resetCart() {
-  cart.lines = []; cart.editingTx = null; cart.dateTouched = false;
+  cart.lines = []; cart.editingTx = null; cart.dateTouched = false; cart.returnTo = null;
   $('cClient').value = ''; $('cNotes').value = ''; $('cNotes').hidden = true; $('cDate').value = todayStr();
+  $('cTime').value = ''; $('cTimeWrap').hidden = true; $('cDate').closest('.order-fields').classList.remove('editing');
   setPay('cash'); $('payOther').value = '';
   $('editBanner').hidden = true;
   $('btnSaveLabel').textContent = t('save.tx');
   resetBuilder();
 }
-$('cancelEdit').addEventListener('click', resetCart);
+/* cancelling an edit goes back to the page it was started from */
+$('cancelEdit').addEventListener('click', () => { const back = cart.returnTo; resetCart(); if (back) go(back); });
 
 /* Admin: open a saved transaction in the cart to change it */
 async function editTransaction(tx) {
@@ -431,12 +479,17 @@ async function editTransaction(tx) {
     const ok = await askConfirm({ title: t('edit.replaceTitle'), sub: t('edit.replaceSub'), yes: t('hist.edit'), danger: false, icon: 'pencil' });
     if (!ok) return;
   }
-  const defaults = [I18N.en['newtx.defaultClient'], I18N.ar['newtx.defaultClient']];
   cart.editingTx = tx;
+  cart.returnTo = state.page === 'pageNew' ? null : state.page;
   cart.lines = (tx.items || []).map(it => ({ ...it, id: newLineId() }));
   cart.dateTouched = true;
-  $('cClient').value = defaults.includes(tx.client) ? '' : (tx.client || '');
+  $('cClient').value = isDefaultClient(tx.client) ? '' : (tx.client || '');
   $('cDate').value = tx.date || todayStr();
+  // the admin can also correct the time the order was taken
+  const at = tx.createdAt ? new Date(tx.createdAt) : null;
+  $('cTime').value = $('cTime').dataset.orig = at && !isNaN(at) ? pad2(at.getHours()) + ':' + pad2(at.getMinutes()) : '';
+  $('cTimeWrap').hidden = false;
+  $('cDate').closest('.order-fields').classList.add('editing');
   $('cNotes').value = tx.notes || ''; $('cNotes').hidden = !tx.notes;
   setPay(tx.payMethod || 'cash'); $('payOther').value = tx.payOther || '';
   $('editBanner').hidden = false;

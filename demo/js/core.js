@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v3.2 beta';
+const APP_VERSION = 'v3.2';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';

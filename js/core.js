@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v3.1';
+const APP_VERSION = 'v3.2';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -127,18 +127,18 @@ const I18N = {
     'toast.loginOk': 'Signed in ✓',
 
     'cat.search': 'Search services…', 'cat.all': 'All', 'cat.print': 'Printing', 'cat.eng': 'Engineering',
-    'cat.shop': 'Stationery', 'cat.extra': 'Services', 'cat.none': 'No service matches your search',
+    'cat.shop': 'Writing Category', 'cat.extra': 'Services', 'cat.none': 'No service matches your search',
     'svcsub.A4': 'Print · copy · scan', 'svcsub.A3': 'Print · copy · scan', 'svcsub.A5': 'Print · copy · scan',
     'svcsub.eng': 'Plans & large prints', 'svcsub.books': 'Books & notebooks', 'svcsub.office': 'Pens, files…',
     'svcsub.pads': 'Pad binding', 'svcsub.wrap': 'Laminating', 'svcsub.upload': 'Online forms', 'svcsub.custom': 'Anything else',
     'b.close': 'Close', 'b.addSave': 'Add & place order',
     'page.new': 'New order', 'pos.services': 'Services', 'side.today': 'Today', 'pricing.total': 'Total price',
-    'svcsub.contract': 'Stationery', 'svcsub.poa': 'Stationery', 'svcsub.writing': 'Stationery',
+    'svcsub.contract': 'Writing Category', 'svcsub.poa': 'Writing Category', 'svcsub.writing': 'Writing Category',
     'th.title': 'Themes', 'th.desc': 'Pick the shade of blue for light and dark mode on this device.', 'th.light': 'Light', 'th.dark': 'Dark',
     'lt.classic': 'Classic', 'lt.sky': 'Sky', 'lt.ocean': 'Ocean', 'lt.navy': 'Navy', 'lt.steel': 'Steel', 'lt.indigo': 'Indigo',
     'dt.midnight': 'Midnight', 'dt.navy': 'Navy', 'dt.ocean': 'Ocean', 'dt.steel': 'Steel', 'dt.royal': 'Royal', 'dt.abyss': 'Abyss',
     'side.orders': 'Orders', 'side.ordersSub': 'Yesterday: {n}', 'opb.print': 'Print', 'opb.copy': 'Copy', 'opb.scan': 'Scan',
-    'nav.toggle': 'Show / hide menu', 'nav.menu': 'Menu', 'nav.admin': 'Admin', 'nav.collapse': 'Collapse', 'dash.engJobs': 'Engineering jobs', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
+    'nav.toggle': 'Show / hide menu', 'nav.menu': 'Menu', 'nav.admin': 'Admin', 'nav.collapse': 'Collapse', 'newtx.clientPh': 'Client name (optional)', 'sum.items': 'Items', 'order.no': 'Order #{n} today',
     'b.title': 'Add an item', 'b.edit': 'Edit item', 'b.reset': 'Reset',
     'b.item': 'Product', 'b.itemOpt': 'Product (optional)', 'desc.optional': 'Description (optional)', 'custom.name': 'Service name',
     'b.isTotal': 'Price is the total for all pieces', 'b.lineTotal': 'Line total',
@@ -149,6 +149,8 @@ const I18N = {
     'eng.length': 'Length (m)', 'eng.note': 'Note', 'eng.notePh': 'e.g. floor plan…', 'eng.m': 'm',
     'qty': 'Quantity', 'price.unit': 'Price per piece', 'price.total': 'Total price', 'price.job': 'Price', 'price.meter': 'Price per meter',
     'inv.title': 'Current order', 'inv.clear': 'Clear', 'inv.empty': 'No items selected', 'inv.emptySub': 'Pick a service to get started', 'inv.total': 'Total', 'inv.final': 'total price',
+    'newtx.clientReq': 'Client name (required when not paid)', 'newtx.needClient': 'Enter the client name: it is required for unpaid orders',
+    'edit.belowPaid': 'The total cannot be less than the {n} already paid',
     'newtx.client': 'Client', 'newtx.optional': 'Optional', 'newtx.addNote': 'Note', 'newtx.notesPh': 'Any extra details…', 'newtx.defaultClient': 'Client',
     'pay.section': 'Payment', 'pay.otherPh': 'e.g. Bank transfer…',
     'save.tx': 'Place order', 'save.update': 'Update transaction', 'save.short': 'Save',
@@ -174,7 +176,21 @@ const I18N = {
 
     'unpaid.title': 'Unpaid', 'unpaid.empty': 'Everything is paid', 'unpaid.total': 'Outstanding',
     'unpaid.markPaid': 'Mark paid', 'unpaid.daysAgo': '{n} days ago', 'unpaid.today': 'today',
-    'pay.dialogTitle': 'How was it paid?', 'pay.confirm': 'Confirm payment', 'toast.paid': 'Marked as paid ✓',
+    'pay.dialogTitle': 'Record a payment', 'pay.confirm': 'Confirm payment', 'toast.paid': 'Paid in full ✓',
+    'pay.amount': 'Amount received', 'pay.due': 'Owed: {n}', 'pay.date': 'Payment date', 'pay.method': 'Paid with',
+    'pay.err.amount': 'Enter an amount above zero', 'pay.err.over': 'That is more than the {n} owed',
+    'toast.paidPart': 'Payment recorded ✓ · {n} still owed', 'pay.record': 'Record payment', 'pay.owes': 'Owes {n}',
+    'hist.payments': 'Payments', 'hist.changes': 'Change log', 'hist.paidOf': 'Paid {p} of {t}',
+    'log.mistake': 'Marked as a mistake', 'log.unmistake': 'Mistake mark removed', 'log.empty': '(empty)',
+    'log.total': 'Total', 'log.client': 'Client', 'log.date': 'Date', 'log.time': 'Time', 'log.pay': 'Payment', 'log.notes': 'Note', 'log.items': 'Items',
+    'confirm.mistakeDebt': 'This order still owes {n}. Marking it as a mistake removes that debt from Unpaid and from every total.',
+    'unpaid.byClient': 'By client', 'unpaid.byOrder': 'By order', 'unpaid.search': 'Search client…',
+    'unpaid.sum': '{c} clients · {o} orders', 'unpaid.orders': '{n} orders', 'unpaid.order1': '1 order', 'unpaid.oldest': 'oldest {a}', 'unpaid.noMatch': 'No client matches the search',
+    'merge.btn': 'Merge names', 'merge.title': 'Merge two client names', 'merge.from': 'Name to merge', 'merge.to': 'Into',
+    'merge.sub': 'Orders under the first name are grouped under the second. Nothing is deleted and it can be undone.',
+    'merge.go': 'Merge', 'merge.done': 'Names merged ✓', 'merge.undone': 'Merge removed ✓', 'merge.err': 'Pick two different names from the list',
+    'merge.current': 'Merged names', 'merge.undo': 'Undo this merge', 'close': 'Close',
+    'load.older': 'Loading older records…', 'load.err': 'Could not load older records',
 
     'oc.title': 'Operational costs', 'oc.new': 'Record a cost', 'oc.amount': 'Amount', 'oc.date': 'Date',
     'oc.note': 'Note', 'oc.notePh': 'Optional details…', 'oc.otherType': 'Type', 'oc.otherPh': 'e.g. Rent…',
@@ -189,20 +205,21 @@ const I18N = {
 
     'dash.title': 'Dashboard', 'range.today': 'Today', 'range.yesterday': 'Yesterday', 'range.week': 'Last 7 days',
     'range.month': 'This month', 'range.lastmonth': 'Last month', 'range.day': 'Pick a day', 'range.year': 'This year',
-    'vs.prevYear': 'vs the same days last year', 'chart.byMonth': 'Revenue by month',
-    'chart.mix': 'Revenue by category', 'chart.heat': 'Busy times (number of orders)', 'chart.heat28': 'Busy times · 4 weeks up to this day',
-    'chart.clients': 'Top clients', 'heat.fewer': 'fewer', 'heat.more': 'more', 'th.day': 'Day', 'th.orders': 'Orders', 'th.share': 'Share',
+    'vs.prevYear': 'vs the same days last year',
+    'chart.mix': 'Sales by category', 'th.day': 'Day', 'th.month': 'Month', 'th.orders': 'Orders', 'th.share': 'Share',
     'kpi.vs': 'vs previous period',
-    'ins.bestDay': 'Best day', 'ins.peak': 'Busiest hour', 'ins.topSvc': 'Top service', 'ins.topClient': 'Top client',
-    'ins.pieces': 'Printed pieces', 'ins.openUnpaid': 'Unpaid orders (all time)', 'ins.share': '{p}% of revenue',
-    'dash.revenue': 'Revenue', 'dash.tx': 'Transactions', 'dash.avg': 'Average ticket', 'dash.costs': 'Costs',
-    'dash.net': 'Net (revenue − costs)', 'dash.unpaid': 'Not paid yet', 'dash.eng': 'Engineering meters', 'dash.pieces': 'Printed pieces',
+    'ins.bestDay': 'Best day', 'ins.topSvc': 'Top service', 'ins.debtIn': 'Collected from earlier orders', 'ins.newDebt': 'Still owed from these orders',
+    'ins.pieces': 'Printed pieces', 'ins.openUnpaid': 'Unpaid orders (all time)', 'ins.share': '{p}% of sales',
+    'dash.sales': 'Sales', 'dash.collected': 'Collected', 'dash.outstanding': 'Outstanding now', 'dash.tx': 'Orders', 'dash.avg': 'Average order', 'dash.costs': 'Costs',
+    'dash.net': 'Net (collected − costs)',
     'vs.prevDay': 'vs the day before', 'vs.prev7': 'vs the 7 days before', 'vs.prevMonthSpan': 'vs the same days last month', 'vs.prevMonth': 'vs the month before',
     'dash.noPrev': 'nothing to compare', 'dash.nodata': 'No data for this period',
-    'chart.byHour': 'Revenue by hour', 'chart.byDay': 'Revenue by day', 'chart.pay': 'Revenue by payment method',
-    'chart.svc': 'Top services by revenue', 'chart.costs': 'Costs by type', 'chart.months': 'Revenue and costs by month',
-    'dash.longTerm': 'Last 12 months (all records)', 'chart.table': 'Table', 'chart.chart': 'Chart',
-    'legend.revenue': 'Revenue', 'legend.costs': 'Costs', 'th.period': 'Period', 'th.value': 'Value', 'th.jobs': 'Jobs', 'th.net': 'Net',
+    'chart.byDay': 'Sales and collected by day', 'chart.byDay14': 'Sales and collected · 14 days up to this day', 'chart.byMonth': 'Sales and collected by month',
+    'chart.pay': 'Collected by payment method', 'chart.svc': 'Top services by sales', 'chart.costs': 'Costs by type',
+    'chart.svcTree': 'Sales by service, in detail', 'svct.expandAll': 'Expand all', 'svct.collapseAll': 'Collapse all', 'svct.unnamed': 'Not specified',
+    'th.pieces': 'Pieces', 'xh.category': 'Category', 'xh.op': 'Operation / item', 'xh.options': 'Options', 'sheet.svc': 'Sales by service',
+    'chart.daily': 'Daily report', 'chart.monthly': 'Monthly report', 'rep.total': 'Total', 'rep.export': 'Excel', 'chart.table': 'Table', 'chart.chart': 'Chart',
+    'legend.sales': 'Sales', 'legend.collected': 'Collected', 'legend.costs': 'Costs', 'th.period': 'Period', 'th.jobs': 'Jobs', 'th.net': 'Net',
 
     'set.title': 'Settings', 'exp.title': 'Export', 'exp.from': 'From', 'exp.to': 'To',
     'exp.btn': 'Excel', 'exp.csvBtn': 'CSV', 'exp.inclMistakes': 'Include transactions marked as mistakes',
@@ -214,7 +231,7 @@ const I18N = {
     'toast.pwChanged': 'Password changed ✓', 'toast.pwWrong': 'Current admin password is incorrect', 'toast.pwShort': 'Password must be at least 4 characters',
     'machset.title': 'Machines', 'machset.add': 'Add', 'machset.name': 'New machine name',
     'machset.delConfirm': 'Delete this machine?', 'machset.delConfirmSub': 'All its readings will be deleted too.', 'toast.machSaved': 'Machines updated ✓',
-    'cat.title': 'Product lists', 'cat.desc': 'Products offered when recording Stationery and Office supplies. New names typed while recording are added automatically.',
+    'cat.title': 'Product lists', 'cat.desc': 'Products offered when recording the Writing Category and Office supplies. New names typed while recording are added automatically.',
     'cat.addPh': 'Add a product…', 'cat.add': 'Add', 'cat.empty': 'No products yet', 'toast.catSaved': 'List updated ✓',
     'about.title': 'About', 'about.desc': 'Print Zone shares one database with the classic version (still available as a fallback): everything recorded in one appears in the other.',
 
@@ -223,12 +240,15 @@ const I18N = {
     'xh.finish': 'Finish', 'xh.engLen': 'Eng. length (m)', 'xh.engNote': 'Eng. note',
     'xh.qty': 'Qty', 'xh.price': 'Unit price', 'xh.final': 'Final price?', 'xh.total': 'Total', 'xh.mistake': 'Mistake?',
     'xh.grand': 'GRAND TOTAL', 'yes': 'Yes', 'no': 'No',
+    'xh.orderTotal': 'Order total', 'xh.status': 'Status', 'xh.paid': 'Paid', 'xh.owed': 'Owed', 'xh.paidOn': 'Paid on',
+    'st.paid': 'Paid', 'st.part': 'Part-paid', 'st.unpaid': 'Unpaid', 'sheet.daily': 'Daily report',
     'xh.machine': 'Machine', 'xh.reading': 'Reading', 'xh.diff': 'Difference', 'xh.type': 'Cost type', 'xh.amount': 'Amount',
     'sheet.tx': 'Transactions', 'sheet.sum': 'Summary', 'sheet.mach': 'Machines', 'sheet.exp': 'Expenses',
-    'sum.period': 'Period', 'sum.generated': 'Generated on', 'sum.rev': 'Total revenue',
+    'sum.period': 'Period', 'sum.generated': 'Generated on', 'sum.sales': 'Sales (orders in this period)',
+    'sum.collected': 'Collected (received in this period)', 'sum.owed': 'Still owed from these orders',
     'sum.tx': 'Number of transactions', 'sum.pieces': 'Total pieces', 'sum.clients': 'Unique clients',
-    'sum.eng': 'Total engineering meters', 'sum.costs': 'Total costs', 'sum.net': 'Net (revenue − costs)',
-    'sum.bySvc': 'Breakdown by service', 'sum.svcCol': 'Service', 'sum.qtyCol': 'Pieces', 'sum.revCol': 'Revenue',
+    'sum.eng': 'Total engineering meters', 'sum.costs': 'Total costs', 'sum.net': 'Net (collected − costs)',
+    'sum.bySvc': 'Breakdown by service', 'sum.svcCol': 'Service', 'sum.qtyCol': 'Pieces', 'sum.revCol': 'Sales',
     'cur': 'EGP',
   },
   ar: {
@@ -252,18 +272,18 @@ const I18N = {
     'toast.loginOk': 'تم الدخول ✓',
 
     'cat.search': 'ابحث عن خدمة…', 'cat.all': 'الكل', 'cat.print': 'طباعة', 'cat.eng': 'هندسي',
-    'cat.shop': 'أدوات', 'cat.extra': 'خدمات', 'cat.none': 'لا توجد خدمة مطابقة للبحث',
+    'cat.shop': 'قسم الكتابة', 'cat.extra': 'خدمات', 'cat.none': 'لا توجد خدمة مطابقة للبحث',
     'svcsub.A4': 'طباعة · تصوير · سكان', 'svcsub.A3': 'طباعة · تصوير · سكان', 'svcsub.A5': 'طباعة · تصوير · سكان',
     'svcsub.eng': 'لوحات ومطبوعات كبيرة', 'svcsub.books': 'كتب وكشاكيل', 'svcsub.office': 'أقلام، ملفات…',
     'svcsub.pads': 'تكعيب', 'svcsub.wrap': 'تغليف', 'svcsub.upload': 'استمارات أونلاين', 'svcsub.custom': 'أي خدمة أخرى',
     'b.close': 'إغلاق', 'b.addSave': 'إضافة وتسجيل الطلب',
     'page.new': 'طلب جديد', 'pos.services': 'الخدمات', 'side.today': 'اليوم', 'pricing.total': 'سعر إجمالي',
-    'svcsub.contract': 'أدوات', 'svcsub.poa': 'أدوات', 'svcsub.writing': 'أدوات',
+    'svcsub.contract': 'قسم الكتابة', 'svcsub.poa': 'قسم الكتابة', 'svcsub.writing': 'قسم الكتابة',
     'th.title': 'الألوان', 'th.desc': 'اختر درجة الأزرق للوضع الفاتح والداكن على هذا الجهاز.', 'th.light': 'فاتح', 'th.dark': 'داكن',
     'lt.classic': 'كلاسيكي', 'lt.sky': 'سماوي', 'lt.ocean': 'محيطي', 'lt.navy': 'كحلي', 'lt.steel': 'فولاذي', 'lt.indigo': 'نيلي',
     'dt.midnight': 'ليلي', 'dt.navy': 'كحلي', 'dt.ocean': 'محيطي', 'dt.steel': 'فولاذي', 'dt.royal': 'ملكي', 'dt.abyss': 'عميق',
     'side.orders': 'الطلبات', 'side.ordersSub': 'أمس: {n}', 'opb.print': 'طباعة', 'opb.copy': 'تصوير', 'opb.scan': 'سكان',
-    'nav.toggle': 'إظهار / إخفاء القائمة', 'nav.menu': 'القائمة', 'nav.admin': 'الإدارة', 'nav.collapse': 'تصغير', 'dash.engJobs': 'أعمال الهندسي', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
+    'nav.toggle': 'إظهار / إخفاء القائمة', 'nav.menu': 'القائمة', 'nav.admin': 'الإدارة', 'nav.collapse': 'تصغير', 'newtx.clientPh': 'اسم العميل (اختياري)', 'sum.items': 'البنود', 'order.no': 'طلب رقم {n} اليوم',
     'b.title': 'إضافة خدمة', 'b.edit': 'تعديل الخدمة', 'b.reset': 'مسح',
     'b.item': 'المنتج', 'b.itemOpt': 'المنتج (اختياري)', 'desc.optional': 'الوصف (اختياري)', 'custom.name': 'اسم الخدمة',
     'b.isTotal': 'السعر هو الإجمالي لكل القطع', 'b.lineTotal': 'إجمالي البند',
@@ -274,6 +294,8 @@ const I18N = {
     'eng.length': 'الطول (متر)', 'eng.note': 'ملاحظة', 'eng.notePh': 'مثلاً: مخطط أرضي…', 'eng.m': 'متر',
     'qty': 'الكمية', 'price.unit': 'سعر القطعة', 'price.total': 'السعر الإجمالي', 'price.job': 'السعر', 'price.meter': 'سعر المتر',
     'inv.title': 'الطلب الحالي', 'inv.clear': 'مسح', 'inv.empty': 'لا توجد بنود بعد', 'inv.emptySub': 'اختر خدمة للبدء', 'inv.total': 'الإجمالي', 'inv.final': 'سعر إجمالي',
+    'newtx.clientReq': 'اسم العميل (مطلوب لغير المدفوع)', 'newtx.needClient': 'اكتب اسم العميل: مطلوب للطلبات غير المدفوعة',
+    'edit.belowPaid': 'لا يمكن أن يكون الإجمالي أقل من {n} المدفوعة بالفعل',
     'newtx.client': 'العميل', 'newtx.optional': 'اختياري', 'newtx.addNote': 'ملاحظة', 'newtx.notesPh': 'أي تفاصيل إضافية…', 'newtx.defaultClient': 'عميل',
     'pay.section': 'الدفع', 'pay.otherPh': 'مثلاً: تحويل بنكي…',
     'save.tx': 'تسجيل الطلب', 'save.update': 'تحديث المعاملة', 'save.short': 'حفظ',
@@ -299,7 +321,21 @@ const I18N = {
 
     'unpaid.title': 'غير مدفوع', 'unpaid.empty': 'كل المعاملات مدفوعة', 'unpaid.total': 'إجمالي المستحقات',
     'unpaid.markPaid': 'تم الدفع', 'unpaid.daysAgo': 'منذ {n} يوم', 'unpaid.today': 'اليوم',
-    'pay.dialogTitle': 'كيف تم الدفع؟', 'pay.confirm': 'تأكيد الدفع', 'toast.paid': 'تم تسجيل الدفع ✓',
+    'pay.dialogTitle': 'تسجيل دفعة', 'pay.confirm': 'تأكيد الدفع', 'toast.paid': 'تم السداد بالكامل ✓',
+    'pay.amount': 'المبلغ المستلم', 'pay.due': 'المستحق: {n}', 'pay.date': 'تاريخ الدفع', 'pay.method': 'طريقة الدفع',
+    'pay.err.amount': 'أدخل مبلغاً أكبر من صفر', 'pay.err.over': 'المبلغ أكبر من المستحق {n}',
+    'toast.paidPart': 'تم تسجيل الدفعة ✓ · متبقي {n}', 'pay.record': 'تسجيل دفعة', 'pay.owes': 'متبقي {n}',
+    'hist.payments': 'المدفوعات', 'hist.changes': 'سجل التعديلات', 'hist.paidOf': 'مدفوع {p} من {t}',
+    'log.mistake': 'تم التحديد كخطأ', 'log.unmistake': 'تم إلغاء تحديد الخطأ', 'log.empty': '(فارغ)',
+    'log.total': 'الإجمالي', 'log.client': 'العميل', 'log.date': 'التاريخ', 'log.time': 'الوقت', 'log.pay': 'الدفع', 'log.notes': 'الملاحظة', 'log.items': 'البنود',
+    'confirm.mistakeDebt': 'هذا الطلب عليه {n}. تحديده كخطأ يحذف هذا الدين من غير المدفوع ومن كل الإجماليات.',
+    'unpaid.byClient': 'حسب العميل', 'unpaid.byOrder': 'حسب الطلب', 'unpaid.search': 'ابحث عن عميل…',
+    'unpaid.sum': '{c} عميل · {o} طلب', 'unpaid.orders': '{n} طلب', 'unpaid.order1': 'طلب واحد', 'unpaid.oldest': 'الأقدم {a}', 'unpaid.noMatch': 'لا يوجد عميل مطابق للبحث',
+    'merge.btn': 'دمج الأسماء', 'merge.title': 'دمج اسمين لعميل واحد', 'merge.from': 'الاسم المراد دمجه', 'merge.to': 'دمجه في',
+    'merge.sub': 'طلبات الاسم الأول تُجمع تحت الاسم الثاني. لا يُحذف شيء ويمكن التراجع.',
+    'merge.go': 'دمج', 'merge.done': 'تم دمج الأسماء ✓', 'merge.undone': 'تم إلغاء الدمج ✓', 'merge.err': 'اختر اسمين مختلفين من القائمة',
+    'merge.current': 'الأسماء المدموجة', 'merge.undo': 'إلغاء هذا الدمج', 'close': 'إغلاق',
+    'load.older': 'جاري تحميل السجلات الأقدم…', 'load.err': 'تعذر تحميل السجلات الأقدم',
 
     'oc.title': 'المصاريف التشغيلية', 'oc.new': 'تسجيل مصروف', 'oc.amount': 'المبلغ', 'oc.date': 'التاريخ',
     'oc.note': 'ملاحظة', 'oc.notePh': 'تفاصيل اختيارية…', 'oc.otherType': 'النوع', 'oc.otherPh': 'مثلاً: إيجار…',
@@ -314,20 +350,21 @@ const I18N = {
 
     'dash.title': 'لوحة المعلومات', 'range.today': 'اليوم', 'range.yesterday': 'أمس', 'range.week': 'آخر 7 أيام',
     'range.month': 'هذا الشهر', 'range.lastmonth': 'الشهر الماضي', 'range.day': 'اختر يوماً', 'range.year': 'هذا العام',
-    'vs.prevYear': 'مقارنة بنفس الأيام من العام الماضي', 'chart.byMonth': 'الإيرادات حسب الشهر',
-    'chart.mix': 'الإيرادات حسب الفئة', 'chart.heat': 'أوقات الذروة (عدد الطلبات)', 'chart.heat28': 'أوقات الذروة · 4 أسابيع حتى هذا اليوم',
-    'chart.clients': 'أهم العملاء', 'heat.fewer': 'أقل', 'heat.more': 'أكثر', 'th.day': 'اليوم', 'th.orders': 'الطلبات', 'th.share': 'النسبة',
+    'vs.prevYear': 'مقارنة بنفس الأيام من العام الماضي',
+    'chart.mix': 'المبيعات حسب الفئة', 'th.day': 'اليوم', 'th.month': 'الشهر', 'th.orders': 'الطلبات', 'th.share': 'النسبة',
     'kpi.vs': 'مقارنة بالفترة السابقة',
-    'ins.bestDay': 'أفضل يوم', 'ins.peak': 'ساعة الذروة', 'ins.topSvc': 'أعلى خدمة', 'ins.topClient': 'أهم عميل',
-    'ins.pieces': 'القطع المطبوعة', 'ins.openUnpaid': 'طلبات غير مدفوعة (الكل)', 'ins.share': '{p}% من الإيرادات',
-    'dash.revenue': 'الإيرادات', 'dash.tx': 'المعاملات', 'dash.avg': 'متوسط المعاملة', 'dash.costs': 'المصاريف',
-    'dash.net': 'الصافي (الإيرادات − المصاريف)', 'dash.unpaid': 'لم يُدفع بعد', 'dash.eng': 'أمتار الهندسي', 'dash.pieces': 'القطع المطبوعة',
+    'ins.bestDay': 'أفضل يوم', 'ins.topSvc': 'أعلى خدمة', 'ins.debtIn': 'تحصيل من طلبات سابقة', 'ins.newDebt': 'متبقي من طلبات هذه الفترة',
+    'ins.pieces': 'القطع المطبوعة', 'ins.openUnpaid': 'طلبات غير مدفوعة (الكل)', 'ins.share': '{p}% من المبيعات',
+    'dash.sales': 'المبيعات', 'dash.collected': 'المحصّل', 'dash.outstanding': 'المستحق الآن', 'dash.tx': 'الطلبات', 'dash.avg': 'متوسط الطلب', 'dash.costs': 'المصاريف',
+    'dash.net': 'الصافي (محصّل − مصاريف)',
     'vs.prevDay': 'مقارنة باليوم السابق', 'vs.prev7': 'مقارنة بالـ 7 أيام السابقة', 'vs.prevMonthSpan': 'مقارنة بنفس الأيام من الشهر الماضي', 'vs.prevMonth': 'مقارنة بالشهر السابق',
     'dash.noPrev': 'لا توجد بيانات للمقارنة', 'dash.nodata': 'لا توجد بيانات لهذه الفترة',
-    'chart.byHour': 'الإيرادات حسب الساعة', 'chart.byDay': 'الإيرادات حسب اليوم', 'chart.pay': 'الإيرادات حسب طريقة الدفع',
-    'chart.svc': 'أعلى الخدمات إيراداً', 'chart.costs': 'المصاريف حسب النوع', 'chart.months': 'الإيرادات والمصاريف حسب الشهر',
-    'dash.longTerm': 'آخر 12 شهر (كل السجلات)', 'chart.table': 'جدول', 'chart.chart': 'رسم',
-    'legend.revenue': 'الإيرادات', 'legend.costs': 'المصاريف', 'th.period': 'الفترة', 'th.value': 'القيمة', 'th.jobs': 'المرات', 'th.net': 'الصافي',
+    'chart.byDay': 'المبيعات والمحصّل حسب اليوم', 'chart.byDay14': 'المبيعات والمحصّل · 14 يوماً حتى هذا اليوم', 'chart.byMonth': 'المبيعات والمحصّل حسب الشهر',
+    'chart.pay': 'المحصّل حسب طريقة الدفع', 'chart.svc': 'أعلى الخدمات مبيعاً', 'chart.costs': 'المصاريف حسب النوع',
+    'chart.svcTree': 'المبيعات حسب الخدمة بالتفصيل', 'svct.expandAll': 'فتح الكل', 'svct.collapseAll': 'إغلاق الكل', 'svct.unnamed': 'غير محدد',
+    'th.pieces': 'القطع', 'xh.category': 'الفئة', 'xh.op': 'العملية / البند', 'xh.options': 'الخيارات', 'sheet.svc': 'المبيعات حسب الخدمة',
+    'chart.daily': 'التقرير اليومي', 'chart.monthly': 'التقرير الشهري', 'rep.total': 'الإجمالي', 'rep.export': 'Excel', 'chart.table': 'جدول', 'chart.chart': 'رسم',
+    'legend.sales': 'المبيعات', 'legend.collected': 'المحصّل', 'legend.costs': 'المصاريف', 'th.period': 'الفترة', 'th.jobs': 'المرات', 'th.net': 'الصافي',
 
     'set.title': 'الإعدادات', 'exp.title': 'التصدير', 'exp.from': 'من', 'exp.to': 'إلى',
     'exp.btn': 'Excel', 'exp.csvBtn': 'CSV', 'exp.inclMistakes': 'تضمين المعاملات المحددة كخطأ',
@@ -339,7 +376,7 @@ const I18N = {
     'toast.pwChanged': 'تم تغيير كلمة المرور ✓', 'toast.pwWrong': 'كلمة مرور المدير الحالية غير صحيحة', 'toast.pwShort': 'كلمة المرور 4 أحرف على الأقل',
     'machset.title': 'الماكينات', 'machset.add': 'إضافة', 'machset.name': 'اسم ماكينة جديدة',
     'machset.delConfirm': 'حذف هذه الماكينة؟', 'machset.delConfirmSub': 'سيتم حذف كل قراءاتها أيضاً.', 'toast.machSaved': 'تم تحديث الماكينات ✓',
-    'cat.title': 'قوائم المنتجات', 'cat.desc': 'المنتجات المعروضة عند تسجيل الكتابية والأدوات المكتبية. الأسماء الجديدة التي تُكتب أثناء التسجيل تُضاف تلقائياً.',
+    'cat.title': 'قوائم المنتجات', 'cat.desc': 'المنتجات المعروضة عند تسجيل قسم الكتابة والأدوات المكتبية. الأسماء الجديدة التي تُكتب أثناء التسجيل تُضاف تلقائياً.',
     'cat.addPh': 'أضف منتجاً…', 'cat.add': 'إضافة', 'cat.empty': 'لا توجد منتجات بعد', 'toast.catSaved': 'تم تحديث القائمة ✓',
     'about.title': 'عن التطبيق', 'about.desc': 'يستخدم Print Zone نفس قاعدة بيانات النسخة الكلاسيكية (المتاحة كنسخة احتياطية): كل ما يُسجل في إحداهما يظهر في الأخرى.',
 
@@ -348,12 +385,15 @@ const I18N = {
     'xh.finish': 'الإنهاء', 'xh.engLen': 'طول هندسي (متر)', 'xh.engNote': 'ملاحظة هندسية',
     'xh.qty': 'الكمية', 'xh.price': 'سعر الوحدة', 'xh.final': 'سعر نهائي؟', 'xh.total': 'الإجمالي', 'xh.mistake': 'خطأ؟',
     'xh.grand': 'الإجمالي الكلي', 'yes': 'نعم', 'no': 'لا',
+    'xh.orderTotal': 'إجمالي الطلب', 'xh.status': 'الحالة', 'xh.paid': 'المدفوع', 'xh.owed': 'المتبقي', 'xh.paidOn': 'تاريخ الدفع',
+    'st.paid': 'مدفوع', 'st.part': 'مدفوع جزئياً', 'st.unpaid': 'غير مدفوع', 'sheet.daily': 'التقرير اليومي',
     'xh.machine': 'الماكينة', 'xh.reading': 'القراءة', 'xh.diff': 'الفرق', 'xh.type': 'نوع المصروف', 'xh.amount': 'المبلغ',
     'sheet.tx': 'المعاملات', 'sheet.sum': 'الملخص', 'sheet.mach': 'الماكينات', 'sheet.exp': 'المصاريف',
-    'sum.period': 'الفترة', 'sum.generated': 'تاريخ الإنشاء', 'sum.rev': 'إجمالي الإيرادات',
+    'sum.period': 'الفترة', 'sum.generated': 'تاريخ الإنشاء', 'sum.sales': 'المبيعات (طلبات هذه الفترة)',
+    'sum.collected': 'المحصّل (المستلم في هذه الفترة)', 'sum.owed': 'المتبقي من طلبات هذه الفترة',
     'sum.tx': 'عدد المعاملات', 'sum.pieces': 'إجمالي القطع', 'sum.clients': 'عدد العملاء',
-    'sum.eng': 'إجمالي أطوال الهندسي', 'sum.costs': 'إجمالي المصاريف', 'sum.net': 'الصافي (الإيرادات − المصاريف)',
-    'sum.bySvc': 'تفصيل حسب الخدمة', 'sum.svcCol': 'الخدمة', 'sum.qtyCol': 'القطع', 'sum.revCol': 'الإيرادات',
+    'sum.eng': 'إجمالي أطوال الهندسي', 'sum.costs': 'إجمالي المصاريف', 'sum.net': 'الصافي (المحصّل − المصاريف)',
+    'sum.bySvc': 'تفصيل حسب الخدمة', 'sum.svcCol': 'الخدمة', 'sum.qtyCol': 'القطع', 'sum.revCol': 'المبيعات',
     'cur': 'ج.م',
   }
 };
@@ -475,8 +515,109 @@ function txSummary(tx) {
   }).join(' · ');
 }
 
+/* ==================== MONEY ==================== */
+/* An order is owed until it is paid in full. Part-payments are kept in tx.payments; the payment that
+   settles it also sets payMethod to its own method and paidAt, so readers that only know payMethod
+   (the classic app) still see a paid order. Amounts are rounded to 0.01 at every step. */
+const byOldest = (a, b) => (a.date || '').localeCompare(b.date || '') || String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+const paymentsSum = tx => round2((tx.payments || []).reduce((s, p) => s + (p.amount || 0), 0));
+const isOpen = tx => tx.payMethod === 'notpaid' && !tx.mistake;
+function paidAmount(tx) { return tx.payMethod === 'notpaid' ? Math.min(paymentsSum(tx), round2(tx.total)) : round2(tx.total); }
+function owed(tx) { return isOpen(tx) ? round2(Math.max(0, round2(tx.total) - paymentsSum(tx))) : 0; }
+const isoDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : dateKey(d); };
+/* The money received for an order, one entry per day and method: its part-payments, then, once it is
+   paid, whatever they do not cover (on the day it was marked paid, or the order's day if paid on the spot) */
+function collections(tx) {
+  if (tx.mistake) return [];
+  const out = [];
+  let left = round2(tx.total);
+  for (const p of tx.payments || []) {
+    const amount = round2(Math.min(p.amount || 0, left));
+    if (amount <= 0) continue;
+    out.push({ date: p.date, method: p.method, other: p.other || null, amount });
+    left = round2(left - amount);
+  }
+  if (tx.payMethod !== 'notpaid' && left > 0) out.push({ date: tx.paidAt ? isoDay(tx.paidAt) : tx.date, method: tx.payMethod || 'cash', other: tx.payOther || null, amount: left });
+  return out;
+}
+/* Spreads one payment over open orders, oldest first. Returns [{tx, patch}] or throws Error('pay.err.*'). */
+function allocatePayment(txs, { amount, method, other, date, by }) {
+  const open = txs.filter(tx => owed(tx) > 0).sort(byOldest);
+  const due = round2(open.reduce((s, tx) => s + owed(tx), 0));
+  amount = round2(amount);
+  if (!(amount > 0)) throw new Error('pay.err.amount');
+  if (amount > due) throw new Error('pay.err.over');
+  const at = new Date().toISOString();
+  const out = [];
+  let left = amount;
+  for (const tx of open) {
+    if (left <= 0) break;
+    const take = Math.min(left, owed(tx));
+    left = round2(left - take);
+    const patch = { payments: [...(tx.payments || []), { amount: take, method, other: method === 'other' ? (other || null) : null, date, at, by }] };
+    if (take >= owed(tx)) Object.assign(patch, { payMethod: method, payOther: method === 'other' ? (other || null) : null, paidAt: at });
+    out.push({ tx, patch });
+  }
+  return out;
+}
+/* What an edit changed, for the order's change log; null when nothing did */
+function editEntry(before, after, by) {
+  const changes = {};
+  const put = (k, a, b) => { if (a !== b) changes[k] = { from: a, to: b }; };
+  const pay = tx => (tx.payMethod === 'other' ? tx.payOther || 'other' : tx.payMethod || 'cash');
+  const canon = items => JSON.stringify((items || []).map(it => Object.keys(it).sort().filter(k => it[k] !== undefined && k !== 'id').map(k => [k, it[k]])));
+  put('total', round2(before.total), round2(after.total));
+  put('client', before.client || '', after.client || '');
+  put('date', before.date || '', after.date || '');
+  put('time', before.createdAt || '', after.createdAt || before.createdAt || '');
+  put('pay', pay(before), pay(after));
+  put('notes', before.notes || '', after.notes || '');
+  if (canon(before.items) !== canon(after.items)) changes.items = { from: txSummary(before).slice(0, 200), to: txSummary(after).slice(0, 200) };
+  return Object.keys(changes).length ? { at: new Date().toISOString(), by, kind: 'edit', changes } : null;
+}
+
+/* ==================== CLIENTS ==================== */
+/* One key per client however the name was typed: spaces, case, Arabic letter forms and digits are folded */
+function clientKey(name) {
+  return String(name || '').normalize('NFKC').toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x660))
+    .replace(/\s+/g, ' ').trim();
+}
+const DEFAULT_CLIENT_KEYS = new Set(['', clientKey(I18N.en['newtx.defaultClient']), clientKey(I18N.ar['newtx.defaultClient'])]);
+const isDefaultClient = name => DEFAULT_CLIENT_KEYS.has(clientKey(name));
+/* Merged names: the admin points one client's key at another name (kept in settings/catalog) */
+const clientAliases = () => (state.catalog && state.catalog.clientAliases) || {};
+function resolveClientKey(name) {
+  const al = clientAliases();
+  let k = clientKey(name);
+  for (let i = 0; i < 20 && al[k] != null; i++) { const next = clientKey(al[k]); if (next === k) break; k = next; }
+  return k;
+}
+
 /* ==================== STORAGE ==================== */
 let db = null;
+/* Online, orders from the last WINDOW_DAYS days stay live, together with every unpaid order and every
+   order settled since; older ones are fetched once, on demand (store.ensureLoaded). */
+const WINDOW_DAYS = 100;
+const dayStartIso = d => new Date(d + 'T00:00:00').toISOString();
+/* store.loadedFrom: the first date from which every order is in memory ('' = all of them) */
+const isLoaded = from => from >= store.loadedFrom;
+/* Starts fetching older orders when a page needs them and says whether it is still waiting; the page
+   re-renders once they arrive. A range that failed is not retried until the page is reloaded. */
+function loadOlder(from) {
+  if (isLoaded(from)) return false;
+  loadOlder.failed = loadOlder.failed || new Set();
+  if (loadOlder.failed.has(from)) return false;
+  if (!loadOlder.busy) {
+    loadOlder.busy = true;
+    store.ensureLoaded(from)
+      .catch(err => { console.error(err); loadOlder.failed.add(from); toast(t('load.err'), { error: true }); })
+      .finally(() => { loadOlder.busy = false; refreshAfterData(); });
+  }
+  return true;
+}
 function getFbConfig() {
   if (FIREBASE_CONFIG && FIREBASE_CONFIG.projectId) return FIREBASE_CONFIG;
   try { const c = JSON.parse(localStorage.getItem('pz_fbconfig') || 'null'); if (c && c.projectId) return c; } catch (e) {}
@@ -492,6 +633,8 @@ const DEFAULT_MACHINES = [
 
 /* Local mode: the same localStorage keys as the classic app */
 const LocalStore = {
+  loadedFrom: '',
+  async ensureLoaded() { return false; },
   async init() {
     state.transactions = JSON.parse(localStorage.getItem('pz_tx') || '[]');
     state.expenses = JSON.parse(localStorage.getItem('pz_exp') || '[]');
@@ -508,20 +651,78 @@ const LocalStore = {
   async addTx(tx) { tx.id = 'L' + Date.now() + Math.random().toString(36).slice(2, 6); state.transactions = [tx, ...state.transactions]; this._saveTx(); },
   async delTx(id) { state.transactions = state.transactions.filter(x => x.id !== id); this._saveTx(); },
   async updateTx(id, patch) { state.transactions = state.transactions.map(x => x.id === id ? { ...x, ...patch } : x); this._saveTx(); },
+  async updateMany(list) { const by = new Map(list.map(u => [u.id, u.patch])); state.transactions = state.transactions.map(x => by.has(x.id) ? { ...x, ...by.get(x.id) } : x); this._saveTx(); },
   async addExp(exp) { exp.id = 'E' + Date.now() + Math.random().toString(36).slice(2, 6); state.expenses = [exp, ...state.expenses]; this._saveExp(); },
   async delExp(id) { state.expenses = state.expenses.filter(e => e.id !== id); this._saveExp(); },
   async saveCatalog(cat) { state.catalog = cat; localStorage.setItem('pz_catalog', JSON.stringify(cat)); },
   async saveMachines(machines) { state.machines = machines; localStorage.setItem('pz_mc', JSON.stringify(machines)); refreshAfterData(); },
   async saveSettings(s) { state.settings = s; localStorage.setItem('pz_settings', JSON.stringify(s)); },
+  /* records already present (same id) are kept as they are, also when the file repeats one */
   async importRecords(txs, exps) {
+    const fresh = (list, have) => { const ids = new Set(have.map(x => String(x.id))); return list.filter(x => !ids.has(String(x.id)) && ids.add(String(x.id))); };
+    txs = fresh(txs, state.transactions); exps = fresh(exps, state.expenses);
     if (txs.length) { state.transactions = [...txs, ...state.transactions]; localStorage.setItem('pz_tx', JSON.stringify(state.transactions)); }
     if (exps.length) { state.expenses = [...exps, ...state.expenses]; localStorage.setItem('pz_exp', JSON.stringify(state.expenses)); }
     refreshAfterData();
+    return txs.length + exps.length;
   },
 };
 
 /* Online mode: the same Firestore collections and documents as the classic app */
+/* Reads a query in pages, so a large range never arrives as one huge response */
+async function pagedGet(query, size = 1000) {
+  const out = [];
+  let last = null;
+  for (;;) {
+    const snap = await (last ? query.startAfter(last) : query).limit(size).get();
+    out.push(...snap.docs);
+    if (snap.size < size) return out;
+    last = snap.docs[snap.docs.length - 1];
+  }
+}
 const FireStore = {
+  /* orders by source, merged by id: three live listeners plus what was fetched on demand */
+  src: { older: {}, settled: {}, unpaid: {}, recent: {} },
+  loadedFrom: null,
+  _loading: null,
+  _merge() {
+    state.transactions = Object.values(Object.assign({}, this.src.older, this.src.settled, this.src.unpaid, this.src.recent));
+    refreshAfterData();
+  },
+  _listen(name, query) {
+    query.onSnapshot(snap => {
+      const m = {};
+      snap.docs.forEach(d => { m[d.id] = { ...d.data(), id: d.id }; });
+      this.src[name] = m;
+      this._merge();
+    }, err => console.error('transactions/' + name, err));
+  },
+  /* Fetches the orders dated from `from` ('' = all) that are not in memory yet, plus those settled since then */
+  async ensureLoaded(from) {
+    if (isLoaded(from)) return false;
+    if (this._loading) { await this._loading; return this.ensureLoaded(from); }
+    const until = this.loadedFrom, coll = db.collection('transactions');
+    this._loading = (async () => {
+      const docs = from
+        ? [...await pagedGet(coll.where('date', '>=', from).where('date', '<', until).orderBy('date')),
+           ...await pagedGet(coll.where('paidAt', '>=', dayStartIso(from)).where('paidAt', '<', dayStartIso(until)).orderBy('paidAt'))]
+        : await pagedGet(coll.orderBy(firebase.firestore.FieldPath.documentId()));
+      docs.forEach(d => { this.src.older[d.id] = { ...d.data(), id: d.id }; });
+      this.loadedFrom = from;
+      this._merge();
+    })();
+    try { await this._loading; } finally { this._loading = null; }
+    return true;
+  },
+  /* No cap and no orderBy, so an order is never dropped for being old, unpaid or missing createdAt:
+     the recent window, every unpaid order, and every order settled since the window opened */
+  watchTransactions() {
+    const from = addDays(todayStr(), -WINDOW_DAYS), tx = db.collection('transactions');
+    this.loadedFrom = from;
+    this._listen('recent', tx.where('date', '>=', from));
+    this._listen('unpaid', tx.where('payMethod', '==', 'notpaid'));
+    this._listen('settled', tx.where('paidAt', '>=', dayStartIso(from)));
+  },
   async init() {
     firebase.initializeApp(getFbConfig());
     db = firebase.firestore();
@@ -548,10 +749,7 @@ const FireStore = {
       state.machines = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => (a.order || 0) - (b.order || 0));
       refreshAfterData();
     });
-    db.collection('transactions').orderBy('createdAt', 'desc').limit(5000).onSnapshot(snap => {
-      state.transactions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      refreshAfterData();
-    });
+    this.watchTransactions();
     db.collection('expenses').orderBy('createdAt', 'desc').limit(5000).onSnapshot(snap => {
       state.expenses = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       refreshAfterData();
@@ -562,8 +760,27 @@ const FireStore = {
     cRef.onSnapshot(snap => { if (snap.exists) { state.catalog = snap.data(); refreshAfterData(); } });
   },
   addTx(tx) { return db.collection('transactions').add(tx); },
-  delTx(id) { return db.collection('transactions').doc(id).delete(); },
-  updateTx(id, patch) { return db.collection('transactions').doc(id).update(patch); },
+  delTx(id) {
+    if (this.src.older[id]) { delete this.src.older[id]; this._merge(); }
+    return db.collection('transactions').doc(id).delete();
+  },
+  /* orders fetched on demand get no live updates, so their copy is patched here too */
+  _patchOlder(id, patch) { if (this.src.older[id]) this.src.older[id] = { ...this.src.older[id], ...patch }; },
+  updateTx(id, patch) {
+    if (this.src.older[id]) { this._patchOlder(id, patch); this._merge(); }
+    return db.collection('transactions').doc(id).update(patch);
+  },
+  /* one batch per 450 orders (Firestore allows 500 writes in a batch) */
+  updateMany(list) {
+    const commits = [];
+    for (let i = 0; i < list.length; i += 450) {
+      const batch = db.batch();
+      list.slice(i, i + 450).forEach(({ id, patch }) => { batch.update(db.collection('transactions').doc(id), patch); this._patchOlder(id, patch); });
+      commits.push(batch.commit());
+    }
+    this._merge();
+    return Promise.all(commits);
+  },
   addExp(exp) { return db.collection('expenses').add(exp); },
   delExp(id) { return db.collection('expenses').doc(id).delete(); },
   async saveCatalog(cat) { state.catalog = cat; await db.collection('settings').doc('catalog').set(cat); },
@@ -589,6 +806,7 @@ const FireStore = {
     };
     await put('transactions', txs);
     await put('expenses', exps);
+    return txs.length + exps.length;
   },
 };
 let store = LocalStore;
@@ -620,7 +838,7 @@ function refreshAfterData() {
 function renderActivePage() { const fn = pageRenderers[state.page]; if (fn) fn(); }
 function renderBadges() {
   const live = liveTx();
-  const n = live.filter(tx => tx.payMethod === 'notpaid').length;
+  const n = live.filter(tx => owed(tx) > 0).length;
   ['unpaidBadge', 'bellDot'].forEach(id => { const b = $(id); b.hidden = !n; b.textContent = n > 99 ? '99+' : n; });
   renderSideStats(live);
 }
@@ -678,23 +896,36 @@ function askConfirm({ title, sub = '', yes, danger = true, icon = 'trash-2' }) {
   });
 }
 
-/* Asks which method a debt was paid with. Resolves {payMethod, payOther} or null. */
-function askPayMethod(sub) {
+/* Asks how much was received and how. The amount starts at the full debt; the admin can also date it.
+   Resolves {amount, method, other, date} or null. */
+function askPayment({ sub, due }) {
   return new Promise(resolve => {
     let sel = 'cash';
     const chips = qsa('#payDlgChips .pchip');
     const sync = () => { chips.forEach(c => c.classList.toggle('sel', c.dataset.pay === sel)); $('payDlgOther').hidden = sel !== 'other'; };
     $('paySub').textContent = sub || '';
+    $('payDue').textContent = t('pay.due', { n: fmtMoney(due) });
+    $('payAmt').value = round2(due);
+    $('payErr').textContent = '';
     $('payDlgOther').value = '';
+    $('payDateWrap').hidden = state.role !== 'admin';
+    $('payDate').value = todayStr();
     chips.forEach(c => { c.onclick = () => { sel = c.dataset.pay; sync(); if (sel === 'other') $('payDlgOther').focus(); }; });
     sync();
     const done = v => { closeOverlay('payOverlay'); document.removeEventListener('keydown', onKey, true); resolve(v); };
     const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } };
     document.addEventListener('keydown', onKey, true);
-    $('payYes').onclick = () => done({ payMethod: sel, payOther: sel === 'other' ? ($('payDlgOther').value.trim() || null) : null });
+    $('payYes').onclick = () => {
+      const amount = round2(parseFloat($('payAmt').value));
+      const err = !(amount > 0) ? t('pay.err.amount') : amount > round2(due) ? t('pay.err.over', { n: fmtMoney(due) }) : '';
+      if (err) { $('payErr').textContent = err; $('payAmt').focus(); return; }
+      const date = state.role === 'admin' && $('payDate').value ? $('payDate').value : todayStr();
+      done({ amount, method: sel, other: sel === 'other' ? ($('payDlgOther').value.trim() || null) : null, date });
+    };
+    $('payAmt').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('payYes').click(); } };
     $('payNo').onclick = () => done(null);
     $('payOverlay').onclick = e => { if (e.target === $('payOverlay')) done(null); };
-    openOverlay('payOverlay', 'payYes');
+    openOverlay('payOverlay', 'payAmt');
   });
 }
 
