@@ -13,18 +13,19 @@ function historyRows() {
   const q = $('hSearch').value.trim().toLowerCase();
   return sortedTx().filter(tx => {
     if (!inRange(tx.date, H.range)) return false;
-    if (H.flags.has('unpaid') && (tx.payMethod !== 'notpaid' || tx.mistake)) return false;
+    if (H.flags.has('unpaid') && !(owed(tx) > 0)) return false;
     if (H.flags.has('mistake') && !tx.mistake) return false;
     return !q || txSearchText(tx).includes(q);
   }).sort((a, b) => (b.date || '').localeCompare(a.date || '') || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 }
 function renderHistory() {
+  const loading = H.range === 'all' && loadOlder('');
   const rows = historyRows();
   const isAdmin = state.role === 'admin';
   const sum = $('hSummary');
-  sum.hidden = !rows.length;
+  sum.hidden = !rows.length && !loading;
   const liveTotal = rows.reduce((s, tx) => s + (tx.mistake ? 0 : (tx.total || 0)), 0);
-  sum.innerHTML = `<span>${t('hist.count', { n: rows.length })}</span>${isAdmin ? `<strong>${fmtMoney(liveTotal)}</strong>` : ''}`;
+  sum.innerHTML = `<span>${t('hist.count', { n: rows.length })}${loading ? ' · ' + t('load.older') : ''}</span>${isAdmin ? `<strong>${fmtMoney(liveTotal)}</strong>` : ''}`;
   if (!rows.length) {
     const any = state.transactions.length > 0;
     $('hList').innerHTML = `<div class="empty">${ic('inbox')}<p>${t(any ? 'hist.noresults' : 'hist.empty')}</p>${any && H.range !== 'all' ? `<button type="button" class="btn btn-ghost" data-act="showall">${t('hist.showAll')}</button>` : ''}</div>`;
@@ -45,20 +46,47 @@ function renderHistory() {
   $('hList').innerHTML = html + '</div>';
   $('hMore').hidden = rows.length <= H.limit;
 }
-function txCard(tx) {
+function txCard(tx, opts = {}) {
   const open = H.open.has(tx.id);
-  const unpaid = tx.payMethod === 'notpaid';
+  const due = owed(tx), part = due > 0 && due < round2(tx.total);
+  // on the Unpaid page every row owes, so it shows the amount still owed, its age and any part-payment;
+  // inside a client's group the date stands in for the client's name
+  const owing = opts.owedFirst && due > 0;
+  const title = opts.inGroup ? fmtDate(tx.date) : tx.client || '';
   const badges = (tx.mistake ? `<span class="badge danger">${ic('alert-triangle')}${t('hist.mistake')}</span>` : '')
-    + (unpaid ? `<span class="badge danger">${ic('clock')}${escapeHtml(payLabel(tx))}</span>` : '');
-  const meta = [tx.createdAt ? fmtTime(tx.createdAt) : '', unpaid ? '' : payLabel(tx)].filter(Boolean).join(' · ');
+    + (owing ? (part ? `<span class="badge">${ic('check')}${escapeHtml(t('xh.paid') + ' ' + fmtNum(paidAmount(tx)))}</span>` : '')
+      : due > 0 ? `<span class="badge danger">${ic('clock')}${escapeHtml(part ? t('pay.owes', { n: fmtNum(due) }) : payLabel(tx))}</span>` : '');
+  const meta = owing ? (opts.inGroup ? ageLabel(tx.date) : fmtDate(tx.date) + ' · ' + ageLabel(tx.date))
+    : [tx.createdAt ? fmtTime(tx.createdAt) : '', due > 0 ? '' : payLabel(tx)].filter(Boolean).join(' · ');
+  const amount = owing ? due : tx.total || 0;
+  const pay = opts.payBtn && due > 0 ? `<button type="button" class="btn btn-sm btn-save row-pay" data-act="paid">${ic('banknote')}<span>${t('pay.record')}</span></button>` : '';
   return `<article class="tx${tx.mistake ? ' mistake' : ''}${open ? ' open' : ''}" data-id="${escapeHtml(tx.id)}">
-    <button type="button" class="tx-row" data-act="toggle" aria-expanded="${open}">
-      <span class="tx-ic doc${unpaid ? ' due' : ''}">${ic('file-text')}</span>
-      <span class="tx-main"><span class="tx-client">${escapeHtml(tx.client || '')}${badges}</span><span class="tx-items">${escapeHtml(txSummary(tx))}</span></span>
-      <span class="tx-side"><span class="tx-total">${fmtNum(tx.total || 0)}</span><span class="tx-meta">${escapeHtml(meta)}</span></span>
-    </button>
+    <div class="tx-line">
+      <button type="button" class="tx-row" data-act="toggle" aria-expanded="${open}">
+        <span class="tx-ic doc${due > 0 ? ' due' : ''}">${ic('file-text')}</span>
+        <span class="tx-main"><span class="tx-client">${escapeHtml(title)}${badges}</span><span class="tx-items">${escapeHtml(txSummary(tx))}</span></span>
+        <span class="tx-side"><span class="tx-total${owing ? ' due' : ''}">${fmtNum(amount)}</span><span class="tx-meta">${escapeHtml(meta)}</span></span>
+      </button>${pay}
+    </div>
     ${open ? txDetail(tx) : ''}
   </article>`;
+}
+const ageDays = date => Math.round((new Date(todayStr() + 'T00:00:00') - new Date(date + 'T00:00:00')) / 864e5);
+function ageLabel(date) { const n = ageDays(date); return n <= 0 ? t('unpaid.today') : t('unpaid.daysAgo', { n }); }
+const roleName = by => t('role.' + (by === 'admin' ? 'admin' : 'employee'));
+const stamp = iso => (isoDay(iso) ? fmtDate(isoDay(iso), { day: 'numeric', month: 'short' }) + ' ' + fmtTime(iso) : '');
+/* One change-log line: what changed, old → new */
+function logLine(e) {
+  if (e.kind === 'mistake' || e.kind === 'unmistake') return t('log.' + e.kind);
+  const show = (k, v) => {
+    if (v === '' || v == null) return t('log.empty');
+    if (k === 'total') return fmtNum(v);
+    if (k === 'date') return fmtDate(v);
+    if (k === 'time') return fmtTime(v);
+    if (k === 'pay') return PAY_LABELS[v] ? PAY_LABELS[v][lang] : v;
+    return v;
+  };
+  return Object.entries(e.changes || {}).map(([k, c]) => `${t('log.' + k)}: ${show(k, c.from)} → ${show(k, c.to)}`).join(' · ');
 }
 function txDetail(tx) {
   const isAdmin = state.role === 'admin';
@@ -67,35 +95,52 @@ function txDetail(tx) {
     const price = it.isFinal ? t('inv.final') : fmtNum(it.price) + (it.engPerMeter ? ' / ' + t('eng.m') : '');
     return `<tr><td>${escapeHtml(itemTitle(it))}${extra}</td><td>${it.noQty ? '—' : it.qty}</td><td>${escapeHtml(price)}</td><td>${fmtNum(it.total)}</td></tr>`;
   }).join('');
+  const due = owed(tx);
   const acts = [];
-  if (tx.payMethod === 'notpaid' && !tx.mistake) acts.push(`<button type="button" class="btn btn-sm btn-save" data-act="paid">${ic('check')}${t('unpaid.markPaid')}</button>`);
+  if (due > 0) acts.push(`<button type="button" class="btn btn-sm btn-save" data-act="paid">${ic('banknote')}${t('pay.record')}</button>`);
   if (isAdmin) acts.push(`<button type="button" class="btn btn-sm btn-ghost" data-act="edit">${ic('pencil')}${t('hist.edit')}</button>`);
   if (!isAdmin || tx.mistake) acts.push(`<button type="button" class="btn btn-sm btn-warn" data-act="mistake">${ic('alert-triangle')}${t(tx.mistake ? 'hist.unmarkMistake' : 'hist.markMistake')}</button>`);
   if (isAdmin) acts.push(`<button type="button" class="btn btn-sm btn-danger-soft" data-act="delete">${ic('trash-2')}${t('hist.delete')}</button>`);
-  const meta = [t('hist.by') + ': ' + t('role.' + (tx.createdBy === 'admin' ? 'admin' : 'employee')), tx.editedAt ? t('hist.edited') : ''].filter(Boolean).join(' · ');
+  const meta = [t('hist.by') + ': ' + roleName(tx.createdBy), tx.editedAt ? t('hist.edited') : ''].filter(Boolean).join(' · ');
+  // money received, with its day and method; part-paid orders also say how much is left
+  const got = collections(tx);
+  const pays = (tx.payments || []).length || tx.paidAt ? got.map(c => `<li><span>${escapeHtml(fmtDate(c.date))}</span><span>${escapeHtml(c.method === 'other' ? c.other || PAY_LABELS.other[lang] : PAY_LABELS[c.method] ? PAY_LABELS[c.method][lang] : c.method)}</span><b>${fmtNum(c.amount)}</b></li>`).join('') : '';
+  const paidLine = isOpen(tx) && paidAmount(tx) > 0 ? `<p class="tx-paid">${escapeHtml(t('hist.paidOf', { p: fmtNum(paidAmount(tx)), t: fmtNum(tx.total) }))} · <b>${escapeHtml(t('pay.owes', { n: fmtNum(due) }))}</b></p>` : '';
+  const log = (tx.edits || []).slice().reverse().map(e => `<li><span class="muted">${escapeHtml(stamp(e.at))} · ${escapeHtml(roleName(e.by))}</span><span>${escapeHtml(logLine(e))}</span></li>`).join('');
   return `<div class="tx-detail">
     <div class="table-wrap"><table class="items-table"><thead><tr><th>${t('th.item')}</th><th>${t('th.qty')}</th><th>${t('th.price')}</th><th>${t('th.total')}</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${tx.notes ? `<p class="tx-notes">${ic('sticky-note')} ${escapeHtml(tx.notes)}</p>` : ''}
+    ${paidLine}
+    ${pays ? `<h4 class="tx-sub">${ic('banknote')}${t('hist.payments')}</h4><ul class="pay-log">${pays}</ul>` : ''}
+    ${log ? `<h4 class="tx-sub">${ic('history')}${t('hist.changes')}</h4><ul class="change-log">${log}</ul>` : ''}
     <p class="muted small">${escapeHtml(meta)}</p>
     <div class="tx-actions">${acts.join('')}</div>
   </div>`;
 }
 
-async function markPaid(tx) {
-  const res = await askPayMethod(tx.client + ' · ' + fmtMoney(tx.total || 0));
+/* Records money against one order or a client's orders (oldest first); the rest stays owed */
+async function recordPayment(txs, who) {
+  const due = round2(txs.reduce((s, tx) => s + owed(tx), 0));
+  if (!(due > 0)) return;
+  const res = await askPayment({ sub: who, due });
   if (!res) return;
-  await commit(store.updateTx(tx.id, { ...res, paidAt: new Date().toISOString() }));
-  toast(t('toast.paid'));
+  const updates = allocatePayment(txs, { ...res, by: state.role });
+  await commit(store.updateMany(updates.map(u => ({ id: u.tx.id, patch: u.patch }))));
+  const left = round2(due - res.amount);
+  toast(left > 0 ? t('toast.paidPart', { n: fmtMoney(left) }) : t('toast.paid'));
 }
 async function txAction(act, tx) {
   try {
-    if (act === 'paid') await markPaid(tx);
+    if (act === 'paid') await recordPayment([tx], tx.client + ' · ' + fmtDate(tx.date));
     else if (act === 'edit' && state.role === 'admin') await editTransaction(tx);
     else if (act === 'mistake') {
-      if (tx.mistake) { await commit(store.updateTx(tx.id, { mistake: false })); toast(t('toast.mistakeUnmarked')); }
-      else if (await askConfirm({ title: t('confirm.mistake'), sub: t('confirm.mistakeSub'), yes: t('confirm.mark'), danger: false, icon: 'alert-triangle' })) {
-        await commit(store.updateTx(tx.id, { mistake: true }));
-        toast(t('toast.mistakeMarked'));
+      // marking and unmarking go in the change log; an order that still owes says the debt will go
+      const due = owed(tx);
+      const ok = tx.mistake || await askConfirm({ title: t('confirm.mistake'), sub: due > 0 ? t('confirm.mistakeDebt', { n: fmtMoney(due) }) : t('confirm.mistakeSub'), yes: t('confirm.mark'), danger: due > 0, icon: 'alert-triangle' });
+      if (ok) {
+        const edits = [...(tx.edits || []), { at: new Date().toISOString(), by: state.role, kind: tx.mistake ? 'unmistake' : 'mistake' }];
+        await commit(store.updateTx(tx.id, { mistake: !tx.mistake, edits }));
+        toast(t(tx.mistake ? 'toast.mistakeUnmarked' : 'toast.mistakeMarked'));
       }
     } else if (act === 'delete' && state.role === 'admin') {
       if (await askConfirm({ title: t('confirm.delTx'), sub: t('confirm.delTxSub') })) {
@@ -110,12 +155,13 @@ async function txAction(act, tx) {
   }
   renderActivePage();
 }
+/* History and Unpaid share the order rows: open/close a row, or act on its order */
 function onTxListClick(e) {
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   if (btn.dataset.act === 'showall') { H.range = 'all'; setActiveChip($('hRange'), 'range', 'all'); renderHistory(); return; }
   const card = btn.closest('.tx'); if (!card) return;
   const tx = state.transactions.find(x => String(x.id) === card.dataset.id); if (!tx) return;
-  if (btn.dataset.act === 'toggle') { H.open.has(tx.id) ? H.open.delete(tx.id) : H.open.add(tx.id); renderHistory(); return; }
+  if (btn.dataset.act === 'toggle') { H.open.has(tx.id) ? H.open.delete(tx.id) : H.open.add(tx.id); renderActivePage(); return; }
   txAction(btn.dataset.act, tx);
 }
 $('hList').addEventListener('click', onTxListClick);
@@ -135,30 +181,120 @@ document.addEventListener('keydown', e => {
 pageRenderers.pageHistory = renderHistory;
 
 /* ==================== UNPAID ==================== */
+/* Debts grouped by client (names folded and merged), or one row per order; oldest debt first inside a client */
+const U = { view: 'client', open: new Set() };
+function unpaidGroups() {
+  const groups = new Map();
+  for (const tx of liveTx()) {
+    const due = owed(tx); if (!(due > 0)) continue;
+    const k = resolveClientKey(tx.client);
+    const g = groups.get(k) || { key: k, name: '', txs: [], owed: 0, total: 0 };
+    if (!g.name) g.name = tx.client || '';   // liveTx is newest first, so this is the latest spelling
+    g.txs.push(tx); g.owed = round2(g.owed + due); g.total = round2(g.total + (tx.total || 0));
+    groups.set(k, g);
+  }
+  // a merge target's own spelling wins over the old names
+  const al = clientAliases();
+  Object.values(al).forEach(name => { const g = groups.get(clientKey(name)); if (g) g.name = name; });
+  return [...groups.values()].map(g => ({ ...g, txs: g.txs.sort(byOldest), oldest: g.txs.reduce((m, tx) => (tx.date < m ? tx.date : m), g.txs[0].date) }))
+    .sort((a, b) => b.owed - a.owed);
+}
 function renderUnpaid() {
-  const rows = liveTx().filter(tx => tx.payMethod === 'notpaid').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  const total = rows.reduce((s, tx) => s + (tx.total || 0), 0);
-  $('uSummary').innerHTML = `<span>${t('unpaid.total')} · ${t('hist.count', { n: rows.length })}</span><strong>${fmtMoney(total)}</strong>`;
-  if (!rows.length) { $('uList').innerHTML = `<div class="empty">${ic('check-circle')}<p>${t('unpaid.empty')}</p></div>`; return; }
-  const today = new Date(todayStr() + 'T00:00:00');
-  $('uList').innerHTML = rows.map(tx => {
-    const days = Math.round((today - new Date(tx.date + 'T00:00:00')) / 86400000);
-    const age = days <= 0 ? t('unpaid.today') : t('unpaid.daysAgo', { n: days });
-    return `<article class="tx" data-id="${escapeHtml(tx.id)}">
-      <div class="tx-row static">
-        <span class="tx-ic doc due">${ic('file-text')}</span>
-        <span class="tx-main"><span class="tx-client">${escapeHtml(tx.client || '')}</span><span class="tx-items">${escapeHtml(txSummary(tx))}</span><span class="tx-meta">${escapeHtml(fmtDate(tx.date))} · ${escapeHtml(age)}</span></span>
-        <span class="tx-side"><span class="tx-total">${fmtNum(tx.total || 0)}</span><button type="button" class="btn btn-sm btn-save" data-act="paid">${ic('check')}${t('unpaid.markPaid')}</button></span>
+  const q = clientKey($('uSearch').value);
+  const all = unpaidGroups();
+  const groups = q ? all.filter(g => g.key.includes(q) || g.txs.some(tx => clientKey(tx.client).includes(q))) : all;
+  const nOrders = all.reduce((n, g) => n + g.txs.length, 0);
+  const total = round2(all.reduce((s, g) => s + g.owed, 0));
+  $('uSummary').innerHTML = `<span>${t('unpaid.total')} · ${escapeHtml(t('unpaid.sum', { c: all.length, o: nOrders }))}</span><strong>${fmtMoney(total)}</strong>`;
+  $('uMerge').hidden = state.role !== 'admin';
+  if (!all.length) { $('uList').innerHTML = `<div class="empty">${ic('check-circle')}<p>${t('unpaid.empty')}</p></div>`; return; }
+  if (!groups.length) { $('uList').innerHTML = `<div class="empty">${ic('search')}<p>${t('unpaid.noMatch')}</p></div>`; return; }
+  if (U.view === 'order') {
+    $('uList').innerHTML = groups.flatMap(g => g.txs).sort(byOldest).map(tx => txCard(tx, { owedFirst: true, payBtn: true })).join('');
+    return;
+  }
+  $('uList').innerHTML = groups.map(g => {
+    const open = U.open.has(g.key) || groups.length === 1;
+    const sub = [t('unpaid.orders', { n: g.txs.length }), t('unpaid.oldest', { a: ageLabel(g.oldest) })].join(' · ');
+    const paid = round2(g.total - g.owed);
+    return `<article class="cgroup${open ? ' open' : ''}" data-key="${escapeHtml(g.key)}">
+      <div class="cg-head">
+        <button type="button" class="cg-row" data-act="group" aria-expanded="${open}">
+          <span class="cg-av">${escapeHtml((g.name.trim().charAt(0) || '?').toUpperCase())}</span>
+          <span class="tx-main"><span class="tx-client">${escapeHtml(g.name)}</span><span class="tx-items">${escapeHtml(sub)}</span></span>
+          <span class="tx-side"><span class="tx-total due">${fmtNum(g.owed)}</span>${paid > 0 ? `<span class="tx-meta">${escapeHtml(t('hist.paidOf', { p: fmtNum(paid), t: fmtNum(g.total) }))}</span>` : ''}</span>
+          <span class="cg-chev">${ic('chevron-down')}</span>
+        </button>
+        <button type="button" class="btn btn-sm btn-save row-pay" data-act="paygroup">${ic('banknote')}<span>${t('pay.record')}</span></button>
       </div>
+      ${open ? `<div class="cg-orders">${g.txs.map(tx => txCard(tx, { inGroup: true, owedFirst: true })).join('')}</div>` : ''}
     </article>`;
   }).join('');
 }
 $('uList').addEventListener('click', e => {
-  const btn = e.target.closest('[data-act="paid"]'); if (!btn) return;
-  const tx = state.transactions.find(x => String(x.id) === btn.closest('.tx').dataset.id);
-  if (tx) txAction('paid', tx);
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const grp = btn.closest('.cgroup');
+  if (grp && (btn.dataset.act === 'group' || btn.dataset.act === 'paygroup')) {
+    const k = grp.dataset.key;
+    if (btn.dataset.act === 'group') { U.open.has(k) ? U.open.delete(k) : U.open.add(k); renderUnpaid(); return; }
+    const g = unpaidGroups().find(x => x.key === k);
+    if (g) recordPayment(g.txs, g.name).catch(err => { console.error(err); toast(t('toast.saveErr'), { error: true }); }).then(renderUnpaid);
+    return;
+  }
+  onTxListClick(e);
 });
+$('uView').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; U.view = c.dataset.view; setActiveChip($('uView'), 'view', U.view); renderUnpaid(); });
+$('uSearch').addEventListener('input', debounce(renderUnpaid, 150));
 pageRenderers.pageUnpaid = renderUnpaid;
+
+/* ---------- merging two spellings of one client (admin) ---------- */
+/* every client name seen, one spelling per merged client */
+function mergeNames() {
+  const seen = new Map();
+  for (const tx of liveTx()) {
+    const c = (tx.client || '').trim();
+    if (isDefaultClient(c)) continue;
+    const k = resolveClientKey(c);
+    if (!seen.has(k)) seen.set(k, c);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, lang));
+}
+function renderMergeList() {
+  const al = clientAliases(), keys = Object.keys(al);
+  $('mergeList').innerHTML = keys.length ? `<h4 class="tx-sub">${t('merge.current')}</h4><ul class="merge-list">${keys.map(k => `<li><span>${escapeHtml(k)} → <b>${escapeHtml(al[k])}</b></span><button type="button" class="icon-btn sm ghost" data-undo="${escapeHtml(k)}" aria-label="${escapeHtml(t('merge.undo'))}">${ic('x')}</button></li>`).join('')}</ul>` : '';
+}
+async function saveAliases(al) {
+  await store.saveCatalog({ ...(state.catalog || {}), clientAliases: al });
+  refreshAfterData();
+}
+function openMerge() {
+  if (state.role !== 'admin') return;
+  $('mergeNames').innerHTML = mergeNames().map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+  $('mergeFrom').value = ''; $('mergeTo').value = ''; $('mergeErr').textContent = '';
+  renderMergeList();
+  const close = () => { closeOverlay('mergeOverlay'); document.removeEventListener('keydown', onKey, true); };
+  const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', onKey, true);
+  $('mergeNo').onclick = close;
+  $('mergeOverlay').onclick = e => { if (e.target === $('mergeOverlay')) close(); };
+  $('mergeYes').onclick = async () => {
+    const known = new Set(mergeNames().map(resolveClientKey));
+    const from = $('mergeFrom').value.trim(), to = $('mergeTo').value.trim();
+    const kf = resolveClientKey(from), kt = resolveClientKey(to);
+    if (!from || !to || !known.has(kf) || !known.has(kt) || kf === kt) { $('mergeErr').textContent = t('merge.err'); return; }
+    // the alias hangs on the end of the "from" chain, so merges never form a loop
+    try { await saveAliases({ ...clientAliases(), [kf]: to }); toast(t('merge.done')); close(); }
+    catch (err) { console.error(err); toast(t('toast.saveErr'), { error: true }); }
+  };
+  $('mergeList').onclick = async e => {
+    const b = e.target.closest('[data-undo]'); if (!b) return;
+    const al = { ...clientAliases() }; delete al[b.dataset.undo];
+    try { await saveAliases(al); renderMergeList(); toast(t('merge.undone')); }
+    catch (err) { console.error(err); toast(t('toast.saveErr'), { error: true }); }
+  };
+  openOverlay('mergeOverlay', 'mergeFrom');
+}
+$('uMerge').addEventListener('click', openMerge);
 
 /* ==================== OPERATIONAL COSTS ==================== */
 const X = { type: null, range: 'month' };

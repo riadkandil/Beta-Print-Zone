@@ -533,6 +533,12 @@ html[lang=ar] .order-title{font-size:1rem}
 .ifield svg.icon{position:absolute;top:50%;inset-inline-start:13px;transform:translateY(-50%);color:var(--dim);pointer-events:none;z-index:1}
 .ifield input{padding-inline-start:40px;height:42px}
 .ifield.date input{width:160px;font-size:.84rem;padding-inline-start:36px}
+.ifield.time input{font-size:.84rem;padding-inline-start:36px}
+.ifield.need input{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.ifield.need input::placeholder{color:var(--red-text)}
+.order-fields.editing{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.order-fields.editing > :first-child{grid-column:1/-1}
+.order-fields.editing .ifield.date input{width:100%}
 .cart-lines{flex:1;min-height:150px;overflow-y:auto;padding:8px 10px}
 .line{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;align-items:center;gap:10px;padding:10px;border-radius:12px;transition:background .2s}
 .line + .line{box-shadow:0 -1px 0 var(--line)}
@@ -620,7 +626,10 @@ html[lang=ar] .day-head{font-size:.95rem}
 .tx:hover,.tx.open{background:var(--tint)}
 .tx.open{border-radius:12px;border-bottom-color:transparent;margin:4px 0}
 .tx.mistake{background:var(--red-soft)}
+.tx-line{display:flex;align-items:center;gap:8px}
 .tx-row{width:100%;display:flex;align-items:center;gap:14px;padding:12px 10px;text-align:start}
+.tx-line > .tx-row{flex:1;min-width:0}
+.row-pay{flex-shrink:0;margin-inline-end:8px}
 .tx-row.static{cursor:default}
 .tx-ic{width:32px;height:32px;border-radius:8px;background:var(--amber-soft);color:var(--amber);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .tx-ic svg.icon{width:16px;height:16px}
@@ -634,6 +643,7 @@ html[lang=ar] .day-head{font-size:.95rem}
 .tx-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
 .tx-total{font-weight:700;font-size:1rem;color:var(--text);direction:ltr;font-variant-numeric:tabular-nums}
 .tx-total.warn{color:var(--amber)}
+.tx-total.due{color:var(--red-text)}
 .tx-meta{font-size:.74rem;color:var(--muted);white-space:nowrap}
 .badge{display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--soft);color:var(--muted)}
 .badge.danger{background:var(--red-soft);color:var(--red-text)}
@@ -649,9 +659,34 @@ html[lang=ar] :is(.items-table,.data-table) th{font-size:.76rem}
 .tx-notes{margin-top:10px;font-size:.86rem;color:var(--text-2);display:flex;gap:6px;align-items:flex-start}
 .tx-detail > .muted{margin-top:8px}
 .tx-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+/* payments and the change log inside an opened order */
+.tx-paid{margin-top:10px;font-size:.86rem;color:var(--text-2)}
+.tx-paid b{color:var(--red-text)}
+.tx-sub{display:flex;align-items:center;gap:6px;margin:14px 0 4px;font-size:.78rem;font-weight:700;color:var(--sec)}
+.tx-sub svg.icon{width:15px;height:15px;color:var(--icon)}
+.pay-log,.change-log,.merge-list{list-style:none;margin:0;padding:0}
+.pay-log li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;padding:6px 2px;border-top:1px solid var(--line);font-size:.84rem;color:var(--text-2)}
+.pay-log b{color:var(--title);font-variant-numeric:tabular-nums;direction:ltr}
+.change-log li{display:flex;flex-direction:column;gap:2px;padding:6px 2px;border-top:1px solid var(--line);font-size:.84rem;color:var(--text-2)}
+.change-log .muted{font-size:.74rem}
 #hMore{margin-top:14px}
 #expTypes{margin-bottom:4px}
-@media (max-width:640px){.tx-detail{margin-inline-start:0;padding:0 10px 14px}.tx-row{gap:10px;padding:12px 6px}}
+@media (max-width:640px){.tx-detail{margin-inline-start:0;padding:0 10px 14px}.tx-row{gap:10px;padding:12px 6px}.row-pay span{display:none}.row-pay{padding:0 11px}}
+
+/* ---------- unpaid: one folder per client, its orders oldest first ---------- */
+#pageUnpaid .toolbar #uMerge{margin-inline-start:auto}
+.cgroup{border-bottom:1px solid var(--line);transition:background .15s}
+.cgroup:hover,.cgroup.open{background:var(--tint)}
+.cgroup.open{border-radius:14px;border-bottom-color:transparent;margin:6px 0;padding-bottom:6px}
+.cg-head{display:flex;align-items:center;gap:8px}
+.cg-row{flex:1;min-width:0;display:flex;align-items:center;gap:14px;padding:13px 10px;text-align:start}
+.cg-av{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--red-soft);color:var(--red-text);font-weight:700;font-size:.92rem}
+.cg-chev{display:flex;color:var(--dim);transition:transform .15s}
+.cgroup.open .cg-chev{transform:rotate(180deg)}
+.cg-orders{margin-inline-start:48px;padding-inline-end:8px}
+.cg-orders .tx{border-bottom-color:var(--line)}
+.cg-orders .tx:hover,.cg-orders .tx.open{background:var(--surface)}
+@media (max-width:640px){.cg-orders{margin-inline-start:0;padding:0 4px}.cg-row{gap:10px;padding:12px 6px}}
 
 /* ---------- machines ---------- */
 .mach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
@@ -714,6 +749,8 @@ html[dir=rtl] .spark{transform:scaleX(-1)}
 .insight-sub{font-size:.76rem;color:var(--text-2)}
 .chart-grid{display:grid;gap:16px;margin-top:16px}
 .chart-grid .panel + .panel{margin-top:0}
+/* wide tables scroll inside their card instead of widening the page */
+.chart-grid > .panel{min-width:0}
 @media (min-width:1100px){.chart-grid{grid-template-columns:1fr 1fr}.chart-card.wide{grid-column:1/-1}}
 .section-title{font-size:.84rem;font-weight:700;color:var(--sec);margin:30px 0 14px;padding-top:22px;border-top:1px solid var(--line)}
 html[lang=en] .section-title{text-transform:uppercase;letter-spacing:.14em}
@@ -726,6 +763,7 @@ html[lang=ar] .cc-head h3{font-size:.95rem}
 .key{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
 .s1{background:var(--series-1)}
 .s2{background:var(--series-2)}
+.s3{background:var(--k3)}
 .k1{background:var(--k1)} .k2{background:var(--k2)} .k3{background:var(--k3)} .k4{background:var(--k4)}
 /* columns */
 .cc{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px;--plot:200px}
@@ -737,6 +775,7 @@ html[lang=ar] .cc-head h3{font-size:.95rem}
 .cc-grid:first-child{background:var(--axis)}
 .cc-cols{position:absolute;inset:0;display:flex}
 .cc-col{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:2px;min-width:0}
+.cc-col.mark{background:var(--tint);border-radius:6px 6px 0 0}
 .cc-bar{position:relative;width:min(26px,72%);border-radius:4px 4px 0 0;min-height:0;cursor:default;transition:filter .15s}
 .grouped .cc-bar{width:min(14px,42%)}
 .cc-bar:hover,.cc-bar:focus-visible{filter:brightness(1.15)}
@@ -761,17 +800,13 @@ html[lang=ar] .cc-head h3{font-size:.95rem}
 .share-pct{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
 .share-val{text-align:end;color:var(--muted);font-variant-numeric:tabular-nums;direction:ltr}
 html[dir=rtl] .share-val{text-align:start}
-/* heatmap */
-.hm{display:grid;grid-template-columns:auto repeat(var(--cols),minmax(0,1fr));gap:3px;align-items:center}
-.hm-day{font-size:.72rem;color:var(--muted);padding-inline-end:6px;white-space:nowrap}
-.hm-cell{height:24px;border-radius:4px;background:var(--soft)}
-.hm-cell.zero{opacity:.6}
-.hm-cell:hover,.hm-cell:focus-visible{box-shadow:0 0 0 2px var(--text)}
-.hm > span:not(.hm-day):not(.hm-cell){font-size:.6rem;color:var(--muted);text-align:center;white-space:nowrap;overflow:visible}
-.hm-scale{display:flex;align-items:center;gap:3px;margin-top:14px;font-size:.72rem;color:var(--muted)}
-.hm-scale i{width:18px;height:10px;border-radius:3px}
-.hm-scale span:first-child{margin-inline-end:4px}
-.hm-scale span:last-child{margin-inline-start:4px}
+/* daily report: dimmed empty days, a red negative net, a bold total line */
+.table-wrap.report{max-height:460px;overflow:auto}
+.report thead th{position:sticky;top:0;z-index:1;background:var(--surface)}
+.report tr.zero td{color:var(--dim)}
+.report td.neg{color:var(--bad-text)}
+.report tfoot td{font-weight:700;color:var(--title);border-top:2px solid var(--border);border-bottom:none;position:sticky;bottom:0;background:var(--surface)}
+.loading-note svg.icon{animation:spin 1s linear infinite}
 /* tooltip */
 .tip{position:fixed;z-index:400;pointer-events:none;display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--pop-shadow);max-width:260px}
 .tip strong{font-size:.92rem;font-weight:700;color:var(--text)}
@@ -809,6 +844,14 @@ html[dir=rtl] .cat-chip{padding:4px 12px 4px 4px}
 .modal-icon{width:52px;height:52px;margin:0 auto 14px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--red-soft);color:var(--red-text)}
 .modal-icon.warn{background:var(--amber-soft);color:var(--amber)}
 .modal-icon.ok{background:var(--save-soft);color:var(--save)}
+.pay-fields,.merge-fields{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;text-align:start}
+.pay-fields .field,.merge-fields .field{flex:1 1 150px}
+.pay-fields input{font-size:1.15rem;font-weight:700}
+.pay-due{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:6px 0 12px;font-size:.8rem;color:var(--muted);text-align:start}
+.pay-err{color:var(--red-text);font-weight:600;font-size:.82rem;min-height:1px}
+#mergeErr{margin-top:8px;text-align:start}
+#mergeList{text-align:start;max-height:180px;overflow:auto}
+.merge-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 2px;border-top:1px solid var(--line);font-size:.84rem;color:var(--text-2)}
 .modal-icon svg.icon{width:25px;height:25px}
 .modal h3{font-size:1.12rem;font-weight:700;color:var(--title);margin-bottom:4px}
 .modal-sub{font-size:.88rem;color:var(--muted);margin-bottom:14px}

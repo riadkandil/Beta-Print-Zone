@@ -2,11 +2,11 @@
 
 Transaction recorder for a print shop: printing, photocopying, scanning, engineering plans, stationery and other services. Staff record orders fast; the admin sees money, costs and trends.
 
-Print Zone **v3.1** (the former beta) is the main app. The classic app stays online as a fallback; both share **one Firebase database and one data format**, so anything recorded in one shows up in the other:
+Print Zone **v3.1** (the former beta) is the main app. **v3.2 beta** is being built on the `v3.2-beta` branch, local only until it is approved (see section 9). The classic app stays online as a fallback; both share **one Firebase database**, so anything recorded in one shows up in the other. v3.2 adds fields the classic app does not understand (part-payments), which is why it plans to retire the classic app:
 
 | Version | Path | Status |
 |---|---|---|
-| Print Zone (main) | `/` | v3.1 |
+| Print Zone (main) | `/` | v3.1 live, v3.2 beta local |
 | Classic (fallback) | `/classic/` | v1.12 |
 | Old beta links | `/beta/` | Redirect to `/` |
 
@@ -37,12 +37,13 @@ Print Zone **v3.1** (the former beta) is the main app. The classic app stays onl
 ```
 index.html          all screens (login, POS, history, unpaid, costs, machines, dashboard, settings, dialogs)
 css/app.css         full design system (tokens, themes, layout, components, charts)
-js/core.js          config, helpers, translations (EN/AR), service list, data store, dialogs, navigation, theme
+js/core.js          config, helpers, translations (EN/AR), service list, money and client-name rules, data store, dialogs, navigation, theme
 js/pos.js           recording screen: tiles, price dialog, order panel, save / edit orders
 js/lists.js         History, Unpaid, Costs, Machines pages
 js/dash.js          admin dashboard: KPIs, insights, charts
 js/settings.js      export, backup, passwords, machine list, themes
 js/boot.js          login and startup
+tests/money.html    automated money tests (runs only on a local copy without Firebase)
 logo-mono.png       line-art logo (drawn through a CSS mask in the app's colours)
 logo-icon.png       blue browser-tab icon
 Logo.png            original colour logo (used by the classic app)
@@ -55,7 +56,8 @@ beta/index.html     redirect for old /beta/ links
 ## 3. Roles and login
 
 - **Employee**: records orders, sees History, Unpaid, Costs and Machines.
-- **Admin**: everything an employee can do, plus Dashboard and Settings. Only the admin can edit or delete saved orders.
+- **Admin**: everything an employee can do, plus Dashboard and Settings. Only the admin can edit or delete saved orders and merge client names.
+- **Security note**: the roles are enforced **in the browser only**. Anyone with the link and some technical skill could act as admin or change data directly, because the database accepts any signed-in (anonymous) device. The change log protects against honest mistakes, not against tampering. Staff are trusted for now; real protection needs Firebase Authentication with per-user accounts and Firestore security rules.
 - **Passwords**:
   - Stored as SHA-256 hashes in `settings/config`.
   - The admin changes them in Settings.
@@ -146,13 +148,13 @@ Eleven services in three groups on one screen, no tabs:
 |---|---|---|
 | A4, A3, A5 | Printing | Folder card, drawn as a paper sheet in real proportions + **Print / Copy / Scan** buttons |
 | Engineering | Printing | Folder card with a compass icon + **Print / Copy / Scan** buttons |
-| Contract (عقد), Power of Attorney (توكيل), Writing (كتابة) | Stationery | **One card** with the three items as stacked rows, so full names fit |
-| Lamination, Electronic upload, Office supplies, Other service (always last) | Services | Small cards in a 2 × 2 grid, beside the Stationery card |
+| Contract (عقد), Power of Attorney (توكيل), Writing (كتابة) | Writing Category (قسم الكتابة) | **One card** with the three items as stacked rows, so full names fit |
+| Lamination, Electronic upload, Office supplies, Other service (always last) | Services | Small cards in a 2 × 2 grid, beside the Writing Category card |
 
 - A tile shows a small count badge when that service is already in the current order.
 - Cards show only artwork/icon and name; the open service takes a deeper shade of its tint.
 - Long names wrap to a second line instead of being cut off.
-- The old Stationery (books) and Pads cards are gone; saved orders that used them still show their names. Office supplies came back in v3.1 under Services (it still counts as Stationery in the dashboard). The Settings "Product lists" panel stays hidden; past entries are still suggested.
+- The old Stationery (books) and Pads cards are gone; saved orders that used them still show their names. Office supplies came back in v3.1 under Services (it still counts in the Writing Category on the dashboard). v3.2 renamed the category from "Stationery / أدوات" to "Writing Category / قسم الكتابة". The Settings "Product lists" panel stays hidden; past entries are still suggested.
 
 ### Price dialog (fast entry)
 
@@ -175,7 +177,7 @@ Eleven services in three groups on one screen, no tabs:
 ### Order panel (checkout)
 
 - **Header**: "Current order · Order #N today".
-- **Client name is optional**; it defaults to "Client" and suggests past client names.
+- **Client name**: optional for paid orders (it defaults to "Client"), **required when the payment is Not paid**. The field says so as soon as Not paid is picked, and saving is blocked with a red outline until a name is typed. Past names are suggested, one spelling per client.
 - **Date** follows today unless changed.
 - **Lines**: service icon, title, details, quantity stepper, line total, remove. Tap a line to edit it.
 - **Totals**: number of items and grand total.
@@ -183,7 +185,10 @@ Eleven services in three groups on one screen, no tabs:
 - **Optional note**.
 - **Place order** button. On phones a floating save bar appears when the button is off screen.
 - **Undo** after removing a line or clearing the order.
-- **Admin edit**: open a saved order from History; it loads into the panel with a yellow "Editing" banner and the button becomes "Update order".
+- **Admin edit**: open a saved order from History or Unpaid; it loads into the panel with a yellow "Editing" banner and the button becomes "Update order". Everything can be changed: items, prices, quantities, client, **date and time**, note and payment. Saving returns to the page the edit started from.
+  - Every edit adds an entry to the order's **change log**: who, when, and old → new for total, client, date, time, payment, note and items.
+  - A total below what was already paid is refused.
+  - Switching an unpaid order to a paid method settles it (earlier part-payments are kept); switching a paid order back to Not paid makes the whole total owed again.
 
 ---
 
@@ -191,35 +196,40 @@ Eleven services in three groups on one screen, no tabs:
 
 | Page | Who | What it does |
 |---|---|---|
-| **History** | All | Orders grouped by day with daily totals. Search, Today / Week / Month / All, filter by Unpaid or Mistake. Open an order to see its items. Actions: mark paid, mark/unmark as mistake (excluded from totals), edit and delete (admin). |
-| **Unpaid** | All | Every "Not paid" order with the total owed; **Mark paid** asks for the payment method and records `paidAt`. |
+| **History** | All | Orders grouped by day with daily totals. Search, Today / Week / Month / All, filter by Unpaid (orders that still owe) or Mistake. Open an order to see its items, **payments** and **change log**. Actions: record payment, mark/unmark as mistake (logged; an order that still owes warns that the debt will be removed), edit and delete (admin). |
+| **Unpaid** | All | **By client** (default) or **By order**. A summary shows the total outstanding, the number of clients and orders. Each client shows what they owe, how many orders, the oldest debt's age and what was already paid; it opens to their orders, oldest first. **Record payment** (on a client or an order) takes an amount and a method: it pays the oldest debts first and the rest stays owed. The admin can also date the payment, edit an order, and **merge names** (two spellings of one client; undoable). Search by client name. |
 | **Costs** | All | Record expenses: Repair, Internet, Electricity, Salaries, Inventory, Other (custom name). Amount, date, note. List with ranges and totals. |
 | **Machines** | All | Enter each printer's counter reading; shows the difference since the last reading and the last 5 readings. |
 | **Dashboard** | Admin | See section 7. |
-| **Settings** | Admin | Excel (.xlsx) and CSV export by date range (optionally including mistakes); JSON backup download and restore (keeps existing records); change employee and admin passwords; edit the machine list; manage product names for Stationery and Office supplies; about / version. |
+| **Settings** | Admin | Excel (.xlsx) and CSV export by date range (optionally including mistakes): each order gets Order total, Status (Paid / Part-paid / Unpaid), Paid, Owed and Paid on, and the summary shows Sales, Collected, Still owed, Costs and Net. JSON backup download (**all** orders, also those older than the live window) and restore (keeps existing records). Change employee and admin passwords; edit the machine list; about / version. |
 
 ---
 
 ## 7. Dashboard (admin)
 
-One period filter controls everything on the page. The options are Today, Yesterday, Last 7 days, This month, Last month, This year, or a picked day.
+One period filter controls everything on the page. The options are Today, Yesterday, Last 7 days, This month, Last month, This year, or a picked day. There is **no hour-based analysis** (v3.2 removed it).
 
-- **KPI cards**:
-  - Revenue (large card with a trend line and the change versus the previous period).
-  - Transactions, Average ticket, Costs, Net (revenue − costs), Not paid, Engineering jobs.
-  - Changes are shown as ↑/↓ with a percentage. Green or red depends on whether up is good for that number (for costs, up is bad).
-- **Insights**: best day, busiest hour, top service and its share of revenue, top client, printed pieces, and unpaid orders across all time.
+**Money definitions (v3.2)**:
+
+| Figure | Meaning |
+|---|---|
+| **Sales** | Orders, counted on the order's date (paid or not) |
+| **Collected** | Money received, counted on the day it came in: on the order's date when paid on the spot, on the day it was marked paid, and each part-payment on its own date |
+| **Outstanding** | What clients owe right now, whatever the period |
+| **Net** | Collected − Costs |
+
+- **KPI cards**: Sales (large card with a trend line and the change versus the previous period), Collected, Outstanding now, Costs, Net, Orders, Average order. Changes are shown as ↑/↓ with a percentage; green or red depends on whether up is good (for costs, up is bad).
+- **Insights**: best day, top service and its share of sales, money collected from earlier orders, what this period's orders still owe, printed pieces, and unpaid orders across all time.
+- **Daily report** (table): one row per day (per month for ranges over two months) with orders, sales, collected split into Cash / InstaPay / Vodafone Cash / Other, costs and net, plus a total line. Its totals equal the KPI cards. **Excel** button exports it.
 - **Charts**:
-  - Revenue over time: by hour for one day, by day up to two months, by month beyond.
-  - Revenue by category: Printing / Engineering / Stationery / Services, shown as one share bar.
-  - Top services by revenue.
-  - Busy times: weekday × hour grid of order counts. A single day shows the 4 weeks up to that day.
-  - Top clients.
-  - Revenue by payment method.
+  - Sales and collected by day (a single day shows the 14 days up to it, with the day marked; by month for long ranges).
+  - Sales by category: Printing / Engineering / Writing Category / Services, shown as one share bar.
+  - Top services by sales.
+  - Collected by payment method.
   - Costs by type.
-  - Last 12 months: revenue vs costs (all records).
 - **Every chart** has hover/focus tooltips and a **Table** button that shows the same numbers as a table.
 - Orders marked as mistakes are excluded from all numbers.
+- Ranges older than the live window (see 8) are fetched when picked, with a short "Loading older records…" note.
 
 ---
 
@@ -233,11 +243,18 @@ One period filter controls everything on the page. The options are Today, Yester
 | `expenses` | One document per cost |
 | `machines` | Printer list with counter readings |
 | `settings/config` | Password hashes |
-| `settings/catalog` | Product names for Stationery and Office supplies |
+| `settings/catalog` | Product names (old lists) and `clientAliases` (merged client names) |
 
 ### Order (transaction)
 
-`client, date, notes, payMethod, payOther, items[], total, pieces, engMeters, createdAt, createdBy, deviceId`, plus optional `mistake, editedAt, editedBy, paidAt`.
+`client, date, notes, payMethod, payOther, items[], total, pieces, engMeters, createdAt, createdBy, deviceId`, plus optional `mistake, editedAt, editedBy, paidAt`, and since v3.2:
+
+- `payments: [{ amount, method, other, date, at, by }]`: part-payments. An order stays `payMethod: 'notpaid'` until fully paid; the payment that settles it sets `payMethod` to its own method and `paidAt`, so older readers still see a paid order.
+- `edits: [{ at, by, kind: 'edit', changes: { field: { from, to } } }]` or `{ at, by, kind: 'mistake' | 'unmistake' }`: the change log.
+
+**Loading (online)**: the app keeps three live lists merged by id, with no cap: orders from the last 100 days, every unpaid order, and every order settled in those 100 days. Older orders are fetched once, in pages, when a dashboard range, History "All", an export or a backup needs them. (v3.1 loaded only the newest 5,000 orders, so old orders and old debts could silently disappear.)
+
+**Client names** are matched ignoring extra spaces, upper/lower case, Arabic letter forms (أ إ آ → ا, ى → ي, ة → ه), diacritics and Arabic digits. Merged names live in `settings/catalog.clientAliases` as `{ nameKey: targetName }`; nothing in the orders is rewritten.
 
 ### Item
 
@@ -311,11 +328,23 @@ One period filter controls everything on the page. The options are Today, Yester
 - **Beta v2.6**: six blue light themes next to the dark ones (Settings → Themes); glows and focus rings follow the chosen blue.
 - **v3.0**: the beta becomes the main app at `/`; "Beta" labels removed; the classic app moves to `/classic/`; `/beta/` redirects to `/`.
 - **v3.1**: Stationery as one card with stacked rows; Office supplies card back under Services; Other service last; long names wrap.
+- **v3.2 beta** (branch `v3.2-beta`, local only until approved):
+  - No more 5,000-order cap: recent window + all unpaid + recently settled, older orders on demand; full backups.
+  - Part-payments (oldest debt first), payment history per order, admin can date a payment.
+  - Unpaid page by client (with totals, ages, search) or by order; merge two spellings of a client.
+  - Client name required for unpaid orders; names matched across Arabic spellings.
+  - Admin edits everything including the time; change log on every order; marking a mistake is logged and warns about debts.
+  - Dashboard: Sales / Collected / Outstanding / Net (collected − costs), Daily report with Excel export; busy-times grid, top clients, 12-month chart and all hourly analysis removed.
+  - Exports carry status, paid, owed and paid date; local restore skips duplicates.
+  - "Stationery" renamed "Writing Category / قسم الكتابة".
+  - `tests/money.html`: 110 automated money checks (run on the demo copy).
 
 ---
 
 ## 10. Next steps
 
-- Retire `/classic/` once nobody needs the fallback.
+- **At the v3.2 release**: download a full JSON backup first, then merge `v3.2-beta`, push, and retire `/classic/` (redirect to `/`), since it would show part-paid orders as fully owed. After the first online start, check the browser console for Firestore "permission" or "index" errors.
+- Security: per-user Firebase accounts and Firestore rules (see section 3).
+- Costs can be deleted but not edited.
 - Optional: make the app installable with offline start (PWA), and add a printable receipt.
 - Keep the current plain stack. Consider React + TypeScript only if the app grows a lot (more pages, more developers).

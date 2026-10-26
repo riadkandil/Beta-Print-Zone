@@ -12,15 +12,28 @@ function setExportRange(r) {
 $('xRange').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) setExportRange(c.dataset.range); });
 ['xFrom', 'xTo'].forEach(id => $(id).addEventListener('input', () => setActiveChip($('xRange'), 'range', '')));
 
-function exportData() {
+/* Online, orders older than the live window are fetched first, so an export is never short */
+async function exportData() {
   const from = $('xFrom').value, to = $('xTo').value, withMistakes = $('xMistakes').checked;
+  if (!isLoaded(from)) { toast(t('load.older'), { ms: 8000 }); await store.ensureLoaded(from); }
   const inR = d => (!from || d >= from) && (!to || d <= to);
-  const byDate = (a, b) => (a.date || '').localeCompare(b.date || '') || String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
-  const txs = state.transactions.filter(tx => inR(tx.date) && (withMistakes || !tx.mistake)).sort(byDate);
-  const exps = state.expenses.filter(e => inR(e.date)).sort(byDate);
-  return { from, to, withMistakes, txs, exps };
+  const txs = state.transactions.filter(tx => inR(tx.date) && (withMistakes || !tx.mistake)).sort(byOldest);
+  const exps = state.expenses.filter(e => inR(e.date)).sort(byOldest);
+  const cols = liveTx().flatMap(collections).filter(c => inR(c.date));
+  return { from, to, withMistakes, txs, exps, cols };
 }
-function itemRow(tx, it, n, withMistakes) {
+/* The order's money goes on its first item row only, so summing a column never counts an order twice */
+function moneyCols(tx, first) {
+  if (!first) return { [t('xh.orderTotal')]: '', [t('xh.status')]: '', [t('xh.paid')]: '', [t('xh.owed')]: '', [t('xh.paidOn')]: '' };
+  const due = owed(tx), paid = paidAmount(tx);
+  const got = collections(tx);
+  const status = tx.mistake ? '' : due <= 0 ? t('st.paid') : paid > 0 ? t('st.part') : t('st.unpaid');
+  return {
+    [t('xh.orderTotal')]: round2(tx.total), [t('xh.status')]: status, [t('xh.paid')]: tx.mistake ? '' : paid, [t('xh.owed')]: tx.mistake ? '' : due,
+    [t('xh.paidOn')]: got.length ? got[got.length - 1].date : '',
+  };
+}
+function itemRow(tx, it, n, withMistakes, first) {
   const row = {
     [t('xh.no')]: n, [t('xh.date')]: tx.date, [t('xh.time')]: tx.createdAt ? fmtTime(tx.createdAt) : '',
     [t('xh.client')]: tx.client, [t('xh.by')]: t('role.' + (tx.createdBy === 'admin' ? 'admin' : 'employee')),
@@ -33,26 +46,29 @@ function itemRow(tx, it, n, withMistakes) {
     [t('xh.engLen')]: it.engLength || '', [t('xh.engNote')]: it.engNote || '',
     [t('xh.qty')]: it.noQty ? '' : it.qty, [t('xh.price')]: Number(it.price),
     [t('xh.final')]: it.isFinal ? t('yes') : t('no'), [t('xh.total')]: Number(it.total),
+    ...moneyCols(tx, first),
   };
   if (withMistakes) row[t('xh.mistake')] = tx.mistake ? t('yes') : '';
   return row;
 }
 const fileName = (from, to, ext) => `PrintZone_${from || 'all'}_${to || todayStr()}.${ext}`;
 
-$('xXlsx').addEventListener('click', () => {
-  const { from, to, withMistakes, txs, exps } = exportData();
-  if (!txs.length && !exps.length) { toast(t('toast.expNone'), { error: true }); return; }
+const txRows = (txs, withMistakes) => txs.flatMap((tx, i) => (tx.items || []).map((it, j) => itemRow(tx, it, i + 1, withMistakes, j === 0)));
+$('xXlsx').addEventListener('click', async () => {
+  const { from, to, withMistakes, txs, exps, cols } = await exportData();
+  if (!txs.length && !exps.length && !cols.length) { toast(t('toast.expNone'), { error: true }); return; }
   const live = txs.filter(tx => !tx.mistake);
   const wb = XLSX.utils.book_new();
   if (lang === 'ar') wb.Workbook = { Views: [{ RTL: true }] };
 
-  const rows = [];
-  txs.forEach((tx, i) => (tx.items || []).forEach(it => rows.push(itemRow(tx, it, i + 1, withMistakes))));
-  const grand = sumBy(live, 'total'), pieces = sumBy(live, 'pieces'), costs = sumBy(exps, 'amount');
+  const rows = txRows(txs, withMistakes);
+  // sales are the orders of the period; collected is the money received in it, whatever the order's date
+  const grand = round2(sumBy(live, 'total')), pieces = sumBy(live, 'pieces'), costs = round2(sumBy(exps, 'amount'));
+  const collected = round2(sumBy(cols, 'amount')), stillOwed = round2(live.reduce((s, tx) => s + owed(tx), 0));
   rows.push({});
-  rows.push({ [t('xh.notes')]: t('xh.grand'), [t('xh.qty')]: pieces, [t('xh.total')]: round2(grand) });
+  rows.push({ [t('xh.notes')]: t('xh.grand'), [t('xh.qty')]: pieces, [t('xh.total')]: grand, [t('xh.owed')]: stillOwed });
   const ws1 = XLSX.utils.json_to_sheet(rows);
-  ws1['!cols'] = [5, 11, 9, 18, 10, 12, 22, 14, 14, 9, 11, 9, 13, 16, 8, 10, 10, 12, 8].map(w => ({ wch: w }));
+  ws1['!cols'] = [5, 11, 9, 18, 10, 12, 22, 14, 14, 9, 11, 9, 13, 16, 8, 10, 10, 12, 12, 11, 10, 10, 11, 8].map(w => ({ wch: w }));
   XLSX.utils.book_append_sheet(wb, ws1, t('sheet.tx'));
 
   const svcAgg = {};
@@ -65,13 +81,15 @@ $('xXlsx').addEventListener('click', () => {
     [t('sum.period'), (from || '…') + ' → ' + (to || '…')],
     [t('sum.generated'), new Date().toLocaleString(locale())],
     [],
-    [t('sum.rev'), round2(grand) + ' ' + t('cur')],
+    [t('sum.sales'), grand + ' ' + t('cur')],
+    [t('sum.collected'), collected + ' ' + t('cur')],
+    [t('sum.owed'), stillOwed + ' ' + t('cur')],
     [t('sum.tx'), live.length],
     [t('sum.pieces'), pieces],
     [t('sum.clients'), new Set(live.map(tx => tx.client)).size],
     [t('sum.eng'), round2(sumBy(live, 'engMeters')) + ' ' + t('eng.m')],
-    [t('sum.costs'), round2(costs) + ' ' + t('cur')],
-    [t('sum.net'), round2(grand - costs) + ' ' + t('cur')],
+    [t('sum.costs'), costs + ' ' + t('cur')],
+    [t('sum.net'), round2(collected - costs) + ' ' + t('cur')],
     [],
     [t('sum.bySvc')],
     [t('sum.svcCol'), t('sum.qtyCol'), t('sum.revCol')],
@@ -103,12 +121,11 @@ $('xXlsx').addEventListener('click', () => {
   toast(t('toast.expDone'));
 });
 
-$('xCsv').addEventListener('click', () => {
-  const { from, to, withMistakes, txs } = exportData();
+$('xCsv').addEventListener('click', async () => {
+  const { from, to, withMistakes, txs } = await exportData();
   if (!txs.length) { toast(t('toast.expNone'), { error: true }); return; }
   const esc = v => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const rows = [];
-  txs.forEach((tx, i) => (tx.items || []).forEach(it => rows.push(itemRow(tx, it, i + 1, withMistakes))));
+  const rows = txRows(txs, withMistakes);
   const head = Object.keys(rows[0]);
   const csv = [head.map(esc).join(','), ...rows.map(r => head.map(h => esc(r[h])).join(','))].join('\r\n');
   download(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }), fileName(from, to, 'csv'));
@@ -122,7 +139,15 @@ function download(blob, name) {
 }
 
 /* ---------- backup (same file format as the classic app) ---------- */
-$('bkExport').addEventListener('click', () => {
+/* A backup holds every order, so online it first fetches those older than the live window */
+async function loadAll() {
+  if (isLoaded('')) return;
+  toast(t('load.older'), { ms: 10000 });
+  await store.ensureLoaded('');
+}
+$('bkExport').addEventListener('click', async () => {
+  try { await loadAll(); }
+  catch (err) { console.error(err); toast(t('load.err'), { error: true }); return; }
   const data = { version: 1, exportedAt: new Date().toISOString(), transactions: state.transactions, machines: state.machines, expenses: state.expenses };
   download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `printzone-backup-${todayStr()}.json`);
   toast(t('toast.backupDone'));
@@ -132,14 +157,16 @@ $('bkImport').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await file.text());
     if (!Array.isArray(data.transactions)) throw new Error('no transactions');
+    // every order must be known first, or restoring would overwrite newer copies of old orders
+    await loadAll();
     const txIds = new Set(state.transactions.map(x => String(x.id)));
     const expIds = new Set(state.expenses.map(x => String(x.id)));
     const txs = data.transactions.filter(x => x && x.id && !txIds.has(String(x.id)));
     const exps = (Array.isArray(data.expenses) ? data.expenses : []).filter(x => x && x.id && !expIds.has(String(x.id)));
-    await store.importRecords(txs, exps);
+    const n = await store.importRecords(txs, exps);
     // machines are only restored in local mode, as in the classic app, so live counters are never overwritten
     if (!state.online && Array.isArray(data.machines) && data.machines.length) await store.saveMachines(data.machines);
-    toast(t('toast.restoreDone', { n: txs.length + exps.length }));
+    toast(t('toast.restoreDone', { n }));
   } catch (err) {
     console.error(err);
     toast(t('toast.restoreErr'), { error: true });

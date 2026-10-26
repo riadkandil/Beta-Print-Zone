@@ -1,14 +1,13 @@
 'use strict';
 /* ==================== DASHBOARD (admin) ==================== */
-/* One period filter scopes the KPIs, the insights and every chart; the
-   12-month chart below the "all records" heading is deliberately unscoped. */
+/* One period filter scopes the KPIs, the insights, the charts and the daily report.
+   Sales count orders on their own date; Collected counts money on the day it came in;
+   Outstanding is what is owed right now, whatever the period. Net = Collected − Costs. */
 const DS = { range: 'today', day: null, tables: new Set() };
 const daysInMonth = d => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 const sumBy = (list, f) => list.reduce((s, x) => s + (x[f] || 0), 0);
 const dayDiff = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
-const isDark = () => document.documentElement.classList.contains('dark');
 const otherLabel = () => (lang === 'ar' ? 'أخرى' : 'Other');
-const DEFAULT_CLIENTS = () => new Set([I18N.en['newtx.defaultClient'], I18N.ar['newtx.defaultClient'], '']);
 
 function periodFor(range) {
   const today = todayStr();
@@ -38,16 +37,44 @@ function periodLabel(p) {
   if (p.from === p.to) return fmtDay(p.from);
   return fmtDate(p.from, { day: 'numeric', month: 'short' }) + ' – ' + fmtDate(p.to, { day: 'numeric', month: 'short', year: 'numeric' });
 }
+/* Every amount received, with the day it came in and the day of its order */
+const allCollections = memoTx(() => liveTx().flatMap(tx => collections(tx).map(c => ({ ...c, txDate: tx.date }))));
 function metrics(from, to) {
-  const txs = liveTx().filter(tx => tx.date >= from && tx.date <= to);
-  const exps = state.expenses.filter(e => e.date >= from && e.date <= to);
-  const rev = sumBy(txs, 'total'), costs = sumBy(exps, 'amount');
-  return {
-    txs, exps, rev, costs, net: rev - costs, count: txs.length, avg: txs.length ? rev / txs.length : 0,
-    unpaid: sumBy(txs.filter(tx => tx.payMethod === 'notpaid'), 'total'),
-    engJobs: txs.reduce((n, tx) => n + (tx.items || []).filter(it => it.svc === 'eng').length, 0), pieces: sumBy(txs, 'pieces'),
-  };
+  const inR = d => d >= from && d <= to;
+  const txs = liveTx().filter(tx => inR(tx.date));
+  const cols = allCollections().filter(c => inR(c.date));
+  const exps = state.expenses.filter(e => inR(e.date));
+  const sales = round2(sumBy(txs, 'total')), collected = round2(sumBy(cols, 'amount')), costs = round2(sumBy(exps, 'amount'));
+  return { txs, cols, exps, sales, collected, costs, net: round2(collected - costs), count: txs.length, avg: txs.length ? sales / txs.length : 0, pieces: sumBy(txs, 'pieces') };
 }
+const outstandingNow = () => round2(liveTx().reduce((s, tx) => s + owed(tx), 0));
+
+/* One row per day (per month past two months): orders, sales, money in by method, costs and net */
+const PAY_KEYS = ['cash', 'instapay', 'vodafone', 'other'];
+const REP_SUMS = ['orders', 'sales', ...PAY_KEYS, 'collected', 'costs'];
+function dailyReport(from, to) {
+  const byMonth = dayDiff(from, to) > 62;
+  const slot = d => (byMonth ? d.slice(0, 7) : d);
+  const rows = new Map();
+  const row = k => { if (!rows.has(k)) rows.set(k, Object.fromEntries([['key', k], ...REP_SUMS.map(f => [f, 0])])); return rows.get(k); };
+  for (let d = from; d <= to; d = addDays(d, 1)) row(slot(d));
+  const m = metrics(from, to);
+  m.txs.forEach(tx => { const r = row(slot(tx.date)); r.orders++; r.sales += tx.total || 0; });
+  m.cols.forEach(c => { const r = row(slot(c.date)); r[PAY_KEYS.includes(c.method) ? c.method : 'other'] += c.amount; r.collected += c.amount; });
+  m.exps.forEach(e => { row(slot(e.date)).costs += e.amount || 0; });
+  const total = Object.fromEntries([['key', ''], ...REP_SUMS.map(f => [f, 0])]);
+  const list = [...rows.values()].sort((a, b) => a.key.localeCompare(b.key));
+  list.forEach(r => {
+    REP_SUMS.forEach(f => { r[f] = round2(r[f]); total[f] = round2(total[f] + r[f]); });
+    r.net = round2(r.collected - r.costs);
+  });
+  total.net = round2(total.collected - total.costs);
+  return { byMonth, rows: list, total };
+}
+const repLabel = (rep, k, long) => (rep.byMonth ? fmtDate(k + '-01', { month: long ? 'long' : 'short', year: 'numeric' }) : fmtDate(k, { weekday: 'short', day: 'numeric', month: 'short' }));
+const repHead = rep => [t(rep.byMonth ? 'th.month' : 'th.day'), t('th.orders'), t('legend.sales'), ...PAY_KEYS.map(k => PAY_LABELS[k][lang]), t('legend.collected'), t('legend.costs'), t('th.net')];
+const repCells = r => [r.orders, r.sales, ...PAY_KEYS.map(k => r[k]), r.collected, r.costs, r.net];
+
 /* Signed change vs the previous period; colour = direction × whether up is good, always with an arrow and text */
 function deltaHtml(cur, prev, upIsGood) {
   if (!prev) return `<span class="delta flat">${t('dash.noPrev')}</span>`;
@@ -83,7 +110,7 @@ function colChart(cats, series) {
     for (let i = v.length - 1; i >= 0; i--) if (v[i] > 0) { labelled.add(i); break; }
   }
   const every = cats.length > 16 ? Math.ceil(cats.length / 10) : 1;
-  const cols = cats.map((c, i) => `<div class="cc-col">${series.map(s => {
+  const cols = cats.map((c, i) => `<div class="cc-col${c.mark ? ' mark' : ''}">${series.map(s => {
     const v = s.values[i] || 0;
     const tipL = c.full + (single ? '' : ' · ' + s.name);
     return `<div class="cc-bar ${s.cls}" style="height:${(v / top * 100).toFixed(2)}%" tabindex="0" data-tip-v="${escapeHtml(fmtMoney(v))}" data-tip-l="${escapeHtml(tipL)}">${labelled.has(i) ? `<span class="cc-val">${fmtCompact(v)}</span>` : ''}</div>`;
@@ -112,26 +139,7 @@ function shareBar(rows) {
   const legend = rows.map(r => `<div class="share-row"><i class="key ${r.cls}"></i><span class="share-name">${escapeHtml(r.label)}</span><span class="share-pct">${Math.round(r.value / total * 100)}%</span><span class="share-val">${fmtInt(r.value)}</span></div>`).join('');
   return `<div class="share-bar">${segs}</div><div class="share-legend">${legend}</div>`;
 }
-/* Weekday × hour grid, one blue ramp light→dark by order count */
-const HEAT_LIGHT = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95'];
-const HEAT_DARK = ['#184f95', '#256abf', '#3987e5', '#5598e7', '#86b6ef', '#b7d3f6'];
-function heatmap(grid, hours, max) {
-  const ramp = isDark() ? HEAT_DARK : HEAT_LIGHT;
-  const step = v => (v ? ramp[Math.min(ramp.length - 1, Math.floor((v / max) * (ramp.length - 0.001)))] : '');
-  const hourLbl = h => new Date(2000, 0, 1, h).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: 'numeric', hour12: true });
-  const rows = grid.map((row, wd) => `<span class="hm-day">${escapeHtml(weekdayName(wd))}</span>${hours.map(h => {
-    const v = row[h] || 0;
-    return `<span class="hm-cell${v ? '' : ' zero'}" style="${v ? 'background:' + step(v) : ''}" tabindex="0" data-tip-v="${v} ${escapeHtml(t('th.orders'))}" data-tip-l="${escapeHtml(weekdayName(wd) + ' · ' + hourLbl(h))}"></span>`;
-  }).join('')}`).join('');
-  const every = hours.length > 12 ? 2 : 1;
-  const xl = hours.map((h, i) => `<span>${i % every === 0 ? escapeHtml(hourLbl(h)) : ''}</span>`).join('');
-  return `<div class="hm" style="--cols:${hours.length}">${rows}<span></span>${xl}</div>
-    <div class="hm-scale"><span>${t('heat.fewer')}</span>${ramp.map(c => `<i style="background:${c}"></i>`).join('')}<span>${t('heat.more')}</span></div>`;
-}
-/* weekday 0 = Saturday, the first day of the shop's week */
-function weekdayName(wd) { return new Date(2000, 0, 1 + wd).toLocaleDateString(locale(), { weekday: 'short' }); }
-const shopWeekday = date => (new Date(date + 'T00:00:00').getDay() + 1) % 7;
-/* A small trend line for the revenue card */
+/* A small trend line for the sales card */
 function sparkline(values) {
   if (values.length < 2 || !values.some(Boolean)) return '';
   const w = 160, h = 40, max = Math.max(...values) || 1;
@@ -168,98 +176,98 @@ function serviceGroup(it) {
 const CAT_ORDER = ['print', 'eng', 'shop', 'extra'];
 const itemCat = it => (SVC_DEF[it.svc] ? SVC_DEF[it.svc].cat : 'extra');
 
-/* Revenue over the period: by hour for one day, by day up to two months, by month beyond */
-function trendSeries(p, txs) {
-  const cats = [], values = [];
-  if (p.single) {
-    const byHour = {};
-    txs.forEach(tx => { const h = tx.createdAt ? new Date(tx.createdAt).getHours() : 12; byHour[h] = (byHour[h] || 0) + (tx.total || 0); });
-    const hours = Object.keys(byHour).map(Number);
-    const lo = Math.min(9, ...hours), hi = Math.max(21, ...hours);
-    for (let h = lo; h <= hi; h++) {
-      const lbl = new Date(2000, 0, 1, h).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: 'numeric', hour12: true });
-      cats.push({ label: lbl, full: lbl }); values.push(byHour[h] || 0);
-    }
-    return { cats, values, title: 'chart.byHour' };
-  }
-  if (dayDiff(p.from, p.to) > 62) {
-    const byMonth = {};
-    txs.forEach(tx => { const m = (tx.date || '').slice(0, 7); byMonth[m] = (byMonth[m] || 0) + (tx.total || 0); });
-    for (let m = p.from.slice(0, 7); m <= p.to.slice(0, 7);) {
-      cats.push({ label: fmtDate(m + '-01', { month: 'short' }), full: fmtDate(m + '-01', { month: 'long', year: 'numeric' }) });
-      values.push(byMonth[m] || 0);
-      const d = new Date(m + '-01T00:00:00'); d.setMonth(d.getMonth() + 1); m = dateKey(d).slice(0, 7);
-    }
-    return { cats, values, title: 'chart.byMonth' };
-  }
-  const byDay = {};
-  txs.forEach(tx => { byDay[tx.date] = (byDay[tx.date] || 0) + (tx.total || 0); });
-  for (let d = p.from; d <= p.to; d = addDays(d, 1)) {
-    cats.push({ label: fmtDate(d, DS.range === 'week' ? { weekday: 'short' } : { day: 'numeric' }), full: fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' }) });
-    values.push(byDay[d] || 0);
-  }
-  return { cats, values, title: 'chart.byDay' };
+/* Sales and money collected over time, by day; a single day shows the two weeks up to it */
+const trendFrom = p => (p.single ? addDays(p.to, -13) : p.from);
+function trendSeries(p) {
+  const rep = dailyReport(trendFrom(p), p.to);
+  const cats = rep.rows.map(r => rep.byMonth
+    ? { label: fmtDate(r.key + '-01', { month: 'short' }), full: repLabel(rep, r.key, true) }
+    : { label: fmtDate(r.key, DS.range === 'week' ? { weekday: 'short' } : { day: 'numeric' }), full: repLabel(rep, r.key), mark: p.single && r.key === p.to });
+  return { cats, sales: rep.rows.map(r => r.sales), collected: rep.rows.map(r => r.collected), title: rep.byMonth ? 'chart.byMonth' : p.single ? 'chart.byDay14' : 'chart.byDay' };
+}
+/* The report table: zero days are dimmed, a negative net is red, and several rows get a total line */
+function reportTable(rep) {
+  const num = (v, i) => (i === 0 ? fmtInt(v) : fmtNum(v));
+  const tr = (label, r, cls) => `<tr class="${cls || ''}"><td>${escapeHtml(label)}</td>${repCells(r).map((v, i) => `<td class="${i === repCells(r).length - 1 && v < 0 ? 'neg' : ''}">${num(v, i)}</td>`).join('')}</tr>`;
+  const body = rep.rows.map(r => tr(repLabel(rep, r.key), r, r.orders || r.collected || r.costs ? '' : 'zero')).join('');
+  const foot = rep.rows.length > 1 ? `<tfoot>${tr(t('rep.total'), rep.total, 'total')}</tfoot>` : '';
+  return `<div class="table-wrap report"><table class="data-table"><thead><tr>${repHead(rep).map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+}
+function exportReport() {
+  const p = periodFor(DS.range), rep = dailyReport(p.from, p.to);
+  const wb = XLSX.utils.book_new();
+  if (lang === 'ar') wb.Workbook = { Views: [{ RTL: true }] };
+  const aoa = [repHead(rep), ...rep.rows.map(r => [r.key, ...repCells(r)]), [t('rep.total'), ...repCells(rep.total)]];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [12, 8, 12, 12, 12, 12, 12, 12, 12, 12].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, t('sheet.daily'));
+  XLSX.writeFile(wb, `PrintZone_report_${p.from}_${p.to}.xlsx`);
+  toast(t('toast.expDone'));
 }
 
 function renderDashboard() {
   if (state.role !== 'admin') return;
   const p = periodFor(DS.range);
+  // ranges older than the live window are fetched first; the page re-renders when they arrive
+  const loading = loadOlder(p.prevFrom < trendFrom(p) ? p.prevFrom : trendFrom(p));
+  $('dLoading').hidden = !loading;
+  $('dBody').hidden = loading;
+  if (loading) return;
   const cur = metrics(p.from, p.to), prev = metrics(p.prevFrom, p.prevTo);
-  const trend = trendSeries(p, cur.txs);
+  const trend = trendSeries(p);
+  const outstanding = outstandingNow();
 
   /* ----- KPIs ----- */
   $('dKpis').innerHTML = `<div class="kpi hero">
-      <span class="kpi-label">${t('dash.revenue')} · ${escapeHtml(periodLabel(p))}</span>
-      <span class="hero-value">${fmtInt(cur.rev)}<small>${t('cur')}</small></span>
-      <span class="hero-vs">${deltaHtml(cur.rev, prev.rev, true)}<span class="muted small">${t(p.vs)}</span></span>
-      ${sparkline(trend.values)}
+      <span class="kpi-label">${t('dash.sales')} · ${escapeHtml(periodLabel(p))}</span>
+      <span class="hero-value">${fmtInt(cur.sales)}<small>${t('cur')}</small></span>
+      <span class="hero-vs">${deltaHtml(cur.sales, prev.sales, true)}<span class="muted small">${t(p.vs)}</span></span>
+      ${sparkline(trend.sales)}
     </div>` + [
-    kpi('receipt-text', 'blue', t('dash.tx'), fmtInt(cur.count), deltaHtml(cur.count, prev.count, true)),
-    kpi('calculator', 'violet', t('dash.avg'), fmtInt(cur.avg), deltaHtml(cur.avg, prev.avg, true)),
+    kpi('banknote', 'green', t('dash.collected'), fmtInt(cur.collected), deltaHtml(cur.collected, prev.collected, true)),
+    kpi('hourglass', 'red', t('dash.outstanding'), fmtInt(outstanding)),
     kpi('wallet', 'orange', t('dash.costs'), fmtInt(cur.costs), deltaHtml(cur.costs, prev.costs, false)),
     kpi('trending-up', 'green', t('dash.net'), signed(cur.net), deltaHtml(cur.net, prev.net, true)),
-    kpi('hourglass', 'red', t('dash.unpaid'), fmtInt(cur.unpaid)),
-    kpi('drafting-compass', 'amber', t('dash.engJobs'), fmtInt(cur.engJobs), deltaHtml(cur.engJobs, prev.engJobs, true)),
+    kpi('receipt-text', 'blue', t('dash.tx'), fmtInt(cur.count), deltaHtml(cur.count, prev.count, true)),
+    kpi('calculator', 'violet', t('dash.avg'), fmtInt(cur.avg), deltaHtml(cur.avg, prev.avg, true)),
   ].join('');
 
   /* ----- insights: plain-language facts about the period ----- */
   const ins = [];
-  if (!p.single && cur.rev) {
+  if (!p.single && cur.sales) {
     const byDay = {};
     cur.txs.forEach(tx => { byDay[tx.date] = (byDay[tx.date] || 0) + (tx.total || 0); });
     const [bd, bv] = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
     ins.push(['trophy', t('ins.bestDay'), fmtDate(bd, { weekday: 'short', day: 'numeric', month: 'short' }), fmtMoney(bv)]);
   }
-  if (cur.count) {
-    const byHour = {};
-    cur.txs.forEach(tx => { if (tx.createdAt) { const h = new Date(tx.createdAt).getHours(); byHour[h] = (byHour[h] || 0) + 1; } });
-    const top = Object.entries(byHour).sort((a, b) => b[1] - a[1])[0];
-    if (top) {
-      const h = +top[0], fmtH = x => new Date(2000, 0, 1, x).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: 'numeric', hour12: true });
-      ins.push(['clock', t('ins.peak'), fmtH(h) + ' – ' + fmtH((h + 1) % 24), top[1] + ' ' + t('th.orders')]);
-    }
-  }
   const svc = {};
   cur.txs.forEach(tx => (tx.items || []).forEach(it => { const k = serviceGroup(it); const o = svc[k] = svc[k] || { value: 0, count: 0 }; o.value += it.total || 0; o.count++; }));
   const svcRows = topRows(svc, 6);
-  if (svcRows.length && cur.rev) ins.push(['star', t('ins.topSvc'), svcRows[0].label, t('ins.share', { p: Math.round(svcRows[0].value / cur.rev * 100) })]);
-  const defaults = DEFAULT_CLIENTS();
-  const clients = {};
-  cur.txs.forEach(tx => { const c = (tx.client || '').trim(); if (defaults.has(c)) return; const o = clients[c] = clients[c] || { value: 0, count: 0 }; o.value += tx.total || 0; o.count++; });
-  const clientRows = Object.entries(clients).map(([label, o]) => ({ label, ...o })).sort((a, b) => b.value - a.value).slice(0, 7);
-  if (clientRows.length) ins.push(['user-round', t('ins.topClient'), clientRows[0].label, fmtMoney(clientRows[0].value)]);
+  if (svcRows.length && cur.sales) ins.push(['star', t('ins.topSvc'), svcRows[0].label, t('ins.share', { p: Math.round(svcRows[0].value / cur.sales * 100) })]);
+  // money that came in for orders taken before the period, and what this period's orders still owe
+  const debtIn = round2(sumBy(cur.cols.filter(c => c.txDate < p.from), 'amount'));
+  if (debtIn) ins.push(['hand-coins', t('ins.debtIn'), fmtMoney(debtIn), '']);
+  const newDebt = round2(cur.txs.reduce((s, tx) => s + owed(tx), 0));
+  if (newDebt) ins.push(['clock', t('ins.newDebt'), fmtMoney(newDebt), '']);
   if (cur.pieces) ins.push(['printer', t('ins.pieces'), fmtInt(cur.pieces), '']);
-  const open = liveTx().filter(tx => tx.payMethod === 'notpaid');
-  if (open.length) ins.push(['hourglass', t('ins.openUnpaid'), String(open.length), fmtMoney(sumBy(open, 'total'))]);
-  $('dInsights').innerHTML = ins.map(([icon, label, value, sub]) => `<div class="insight"><span class="insight-ic">${ic(icon)}</span><span class="insight-txt"><span class="insight-label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${sub ? `<span class="insight-sub">${escapeHtml(sub)}</span>` : ''}</span></div>`).join('');
+  const open = liveTx().filter(tx => owed(tx) > 0);
+  if (open.length) ins.push(['hourglass', t('ins.openUnpaid'), String(open.length), fmtMoney(outstanding)]);
+  $('dInsights').innerHTML = ins.map(([icon, label, value, sub]) => `<div class="insight"><span class="insight-ic">${ic(icon) || ic('circle')}</span><span class="insight-txt"><span class="insight-label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${sub ? `<span class="insight-sub">${escapeHtml(sub)}</span>` : ''}</span></div>`).join('');
   $('dInsights').hidden = !ins.length;
 
   /* ----- charts ----- */
+  const series = [{ name: t('legend.sales'), cls: 's1', values: trend.sales }, { name: t('legend.collected'), cls: 's3', values: trend.collected }];
   chartCard('cTrend', t(trend.title), {
-    empty: !cur.rev,
-    chart: colChart(trend.cats, [{ name: t('legend.revenue'), cls: 's1', values: trend.values }]),
-    head: [t('th.period'), t('legend.revenue')], rows: trend.cats.map((c, i) => [c.full, fmtNum(trend.values[i])]),
+    empty: !trend.sales.some(Boolean) && !trend.collected.some(Boolean),
+    legend: legendHtml(series),
+    chart: colChart(trend.cats, series),
+    head: [t('th.period'), t('legend.sales'), t('legend.collected')], rows: trend.cats.map((c, i) => [c.full, fmtNum(trend.sales[i]), fmtNum(trend.collected[i])]),
   });
+
+  const rep = dailyReport(p.from, p.to);
+  const hasRep = rep.total.orders || rep.total.collected || rep.total.costs;
+  $('cDaily').innerHTML = `<div class="cc-head"><h3>${escapeHtml(t(rep.byMonth ? 'chart.monthly' : 'chart.daily'))}</h3>${hasRep ? `<button type="button" class="link-btn" data-report="xlsx">${ic('download')}${t('rep.export')}</button>` : ''}</div>`
+    + (hasRep ? reportTable(rep) : `<div class="empty sm"><p>${t('dash.nodata')}</p></div>`);
 
   const mix = {};
   cur.txs.forEach(tx => (tx.items || []).forEach(it => { const c = itemCat(it); mix[c] = (mix[c] || 0) + (it.total || 0); }));
@@ -268,45 +276,25 @@ function renderDashboard() {
   chartCard('cMix', t('chart.mix'), {
     empty: !mixTotal,
     chart: shareBar(mixRows),
-    head: [t('xh.svc'), t('th.share'), t('legend.revenue')], rows: mixRows.map(r => [r.label, Math.round(r.value / (mixTotal || 1) * 100) + '%', fmtNum(r.value)]),
+    head: [t('xh.svc'), t('th.share'), t('legend.sales')], rows: mixRows.map(r => [r.label, Math.round(r.value / (mixTotal || 1) * 100) + '%', fmtNum(r.value)]),
   });
 
   chartCard('cSvc', t('chart.svc'), {
     empty: !svcRows.length,
     chart: hBars(svcRows.map(r => ({ label: r.label, sub: '(' + r.count + ')', value: r.value })), 's1'),
-    head: [t('xh.svc'), t('th.jobs'), t('legend.revenue')], rows: svcRows.map(r => [r.label, String(r.count), fmtNum(r.value)]),
-  });
-
-  // busy times: a single day is too thin for a weekly pattern, so it looks at the 4 weeks ending that day
-  const heatFrom = p.single ? addDays(p.to, -27) : p.from;
-  const heatTx = liveTx().filter(tx => tx.date >= heatFrom && tx.date <= p.to && tx.createdAt);
-  const grid = Array.from({ length: 7 }, () => ({}));
-  let hLo = 9, hHi = 21, hMax = 0;
-  heatTx.forEach(tx => {
-    const h = new Date(tx.createdAt).getHours(), row = grid[shopWeekday(tx.date)];
-    row[h] = (row[h] || 0) + 1;
-    hMax = Math.max(hMax, row[h]); hLo = Math.min(hLo, h); hHi = Math.max(hHi, h);
-  });
-  const hours = []; for (let h = hLo; h <= hHi; h++) hours.push(h);
-  chartCard('cHeat', t(p.single ? 'chart.heat28' : 'chart.heat'), {
-    empty: !heatTx.length,
-    chart: heatmap(grid, hours, hMax),
-    head: [t('th.day'), ...hours.map(h => String(h))], rows: grid.map((row, wd) => [weekdayName(wd), ...hours.map(h => String(row[h] || 0))]),
-  });
-
-  chartCard('cClients', t('chart.clients'), {
-    empty: !clientRows.length,
-    chart: hBars(clientRows.map(r => ({ label: r.label, sub: '(' + r.count + ')', value: r.value })), 's1'),
-    head: [t('newtx.client'), t('th.orders'), t('legend.revenue')], rows: clientRows.map(r => [r.label, String(r.count), fmtNum(r.value)]),
+    head: [t('xh.svc'), t('th.jobs'), t('legend.sales')], rows: svcRows.map(r => [r.label, String(r.count), fmtNum(r.value)]),
   });
 
   const pay = {};
-  cur.txs.forEach(tx => { const k = payLabel(tx); const o = pay[k] = pay[k] || { value: 0, count: 0 }; o.value += tx.total || 0; o.count++; });
+  cur.cols.forEach(c => {
+    const k = c.method === 'other' ? c.other || PAY_LABELS.other[lang] : PAY_LABELS[c.method] ? PAY_LABELS[c.method][lang] : c.method;
+    const o = pay[k] = pay[k] || { value: 0, count: 0 }; o.value += c.amount; o.count++;
+  });
   const payRows = topRows(pay, 6);
   chartCard('cPay', t('chart.pay'), {
     empty: !payRows.length,
-    chart: hBars(payRows.map(r => ({ label: r.label, sub: '(' + r.count + ')', value: r.value })), 's1'),
-    head: [t('xh.pay'), t('dash.tx'), t('legend.revenue')], rows: payRows.map(r => [r.label, String(r.count), fmtNum(r.value)]),
+    chart: hBars(payRows.map(r => ({ label: r.label, sub: '(' + r.count + ')', value: r.value })), 's3'),
+    head: [t('xh.pay'), t('hist.payments'), t('legend.collected')], rows: payRows.map(r => [r.label, String(r.count), fmtNum(r.value)]),
   });
 
   const cost = {};
@@ -316,22 +304,6 @@ function renderDashboard() {
     empty: !costRows.length,
     chart: hBars(costRows.map(r => ({ label: r.label, value: r.value })), 's2'),
     head: [t('xh.type'), t('xh.amount')], rows: costRows.map(r => [r.label, fmtNum(r.value)]),
-  });
-
-  // last 12 months, all records
-  const now = new Date();
-  const months = [];
-  for (let i = 11; i >= 0; i--) { const m = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(m.getFullYear() + '-' + pad2(m.getMonth() + 1)); }
-  const revM = months.map(m => sumBy(liveTx().filter(tx => (tx.date || '').startsWith(m)), 'total'));
-  const costM = months.map(m => sumBy(state.expenses.filter(e => (e.date || '').startsWith(m)), 'amount'));
-  const mCats = months.map(m => { const l = fmtDate(m + '-01', { month: 'short' }); return { label: l, full: fmtDate(m + '-01', { month: 'long', year: 'numeric' }) }; });
-  const mSeries = [{ name: t('legend.revenue'), cls: 's1', values: revM }, { name: t('legend.costs'), cls: 's2', values: costM }];
-  chartCard('cMonths', t('chart.months'), {
-    empty: !revM.some(Boolean) && !costM.some(Boolean),
-    legend: legendHtml(mSeries),
-    chart: colChart(mCats, mSeries),
-    head: [t('th.period'), t('legend.revenue'), t('legend.costs'), t('th.net')],
-    rows: mCats.map((c, i) => [c.full, fmtNum(revM[i]), fmtNum(costM[i]), fmtNum(revM[i] - costM[i])]),
   });
 }
 $('dRange').addEventListener('click', e => {
@@ -348,6 +320,7 @@ $('dDay').addEventListener('change', () => {
   renderDashboard();
 });
 $('pageDashboard').addEventListener('click', e => {
+  if (e.target.closest('[data-report]')) { exportReport(); return; }
   const b = e.target.closest('[data-table]'); if (!b) return;
   const id = b.dataset.table;
   DS.tables.has(id) ? DS.tables.delete(id) : DS.tables.add(id);
