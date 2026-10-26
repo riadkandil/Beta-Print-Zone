@@ -56,7 +56,7 @@ async function boot() {
   localStorage.setItem('pz_exp', '[]');
   localStorage.removeItem('pz_catalog');
   localStorage.setItem('pz_lang', 'en');
-  localStorage.setItem('pz_seed', '2');
+  localStorage.setItem('pz_seed', '3');
   sessionStorage.setItem('pz_session', 'admin');
   const frame = document.getElementById('app');
   await new Promise(r => { frame.onload = r; frame.src = '../index.html?noseed=1'; });
@@ -362,6 +362,53 @@ async function testScreens() {
   ok('the report has an Excel button', !!reportLink);
 }
 
+async function testServiceTree() {
+  section('Sales by service, in detail');
+  const paper = (svc, op, color, face, finish, qty, total, noQty) => ({ type: 'paper', svc, op, color, face, finish, qty, price: total / qty, total, ...(noQty ? { noQty: true } : {}) });
+  const simple = (svc, desc, total) => ({ type: 'simple', svc, desc, qty: 1, price: total, total });
+  const items = [
+    paper('A4', 'print', 'black', 'one', 'normal', 10, 20), paper('A4', 'print', 'color', 'two', 'glossy', 5, 50),
+    paper('A4', 'copy', 'black', 'one', 'normal', 100, 50), paper('A4', 'scan', '—', '—', '—', 1, 10, true),
+    paper('eng', 'print', '—', '—', '—', 2, 40),
+    simple('contract', '', 30), simple('office', 'Pen', 5), simple('office', ' pen ', 5),
+    { type: 'custom', svc: 'custom', desc: 'Binding', qty: 1, price: 25, total: 25 },
+  ];
+  await load([
+    order('v1', 0, 'A', 170, 'cash', { items: items.slice(0, 5) }),
+    order('v2', 0, 'B', 65, 'cash', { items: items.slice(5) }),
+    order('v3', 0, 'C', 500, 'cash', { mistake: true }),
+  ]);
+  const tree = E('serviceTree')(E('liveTx')().filter(o => o.date === D(0)));
+  const node = (...keys) => keys.reduce((n, k) => n && n.kids.get(k), tree);
+  const kids = n => E('treeKids')(n, 1).map(k => [k.label, k.sales]);
+  eq('categories add up to the sales KPI', [[...tree.kids.values()].reduce((s, k) => s + k.sales, 0), E('metrics')(D(0), D(0)).sales], [235, 235]);
+  eq('category totals', ['print', 'eng', 'shop', 'extra'].map(c => node(c).sales), [130, 40, 40, 25]);
+  eq('A4 splits into print, copy and scan', kids(node('print', 'A4')), [['Print', 70], ['Copy', 50], ['Scan', 10]]);
+  eq('print splits by options', kids(node('print', 'A4', 'print')), [['Color · Two sides · Glossy', 50], ['Black · One side', 20]]);
+  eq('jobs and pieces (scans have no pieces)', [node('print', 'A4').jobs, node('print', 'A4').pieces, node('print', 'A4', 'scan').pieces], [4, 115, 0]);
+  ok('engineering does not repeat its name', !node('eng', 'eng') && node('eng', 'print').sales === 40);
+  eq('an item with no name is a plain row', E('treeKids')(node('shop', 'contract'), 2).length, 0);
+  eq('names typed differently count as one item', kids(node('shop', 'office')), [['Pen', 10]]);
+  eq('other services list their own names', kids(node('extra', 'custom')), [['Binding', 25]]);
+  let sumsOk = true;
+  const check = (n, depth) => { const k = E('treeKids')(n, depth); if (k.length && Math.abs(k.reduce((s, x) => s + x.sales, 0) - n.sales) > 0.004) sumsOk = false; k.forEach(x => check(x, depth + 1)); };
+  [...tree.kids.values()].forEach(c => check(c, 1));
+  ok('every level adds up to the level above', sumsOk);
+
+  E("DS.svcOpen = null; DS.range = 'today'; go('pageDashboard')");
+  await sleep(60);
+  const card = win.document.getElementById('cSvcTree');
+  const rowCount = () => card.querySelectorAll('tbody tr').length;
+  eq('opens on categories and their services', rowCount(), 4 + 1 + 1 + 2 + 1);
+  card.querySelector('[data-node="/print/A4"]').click();
+  eq('opening A4 shows print, copy and scan', rowCount(), 9 + 3);
+  card.querySelector('[data-svc-all="1"]').click();
+  eq('expand all shows every level', rowCount(), 4 + 7 + 1 + 3 + 2);
+  card.querySelector('[data-svc-all="0"]').click();
+  eq('collapse all leaves the categories', rowCount(), 4);
+  eq('the total line matches', card.querySelector('tfoot').textContent.includes('235.00'), true);
+}
+
 async function testExportAndImport() {
   section('Export summary and backup restore');
   await load([order('x1', 1, 'A', 100, 'cash'), order('x2', 20, 'B', 60, 'cash', { paidAt: noonIso(D(1)) }), order('x3', 1, 'C', 30, 'notpaid')]);
@@ -451,6 +498,7 @@ async function testCompleteness() {
     await testEdits();
     await testMistakes();
     await testScreens();
+    await testServiceTree();
     await testExportAndImport();
     await testCompleteness();
   } catch (err) {

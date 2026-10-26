@@ -221,6 +221,7 @@ One period filter controls everything on the page. The options are Today, Yester
 - **KPI cards**: Sales (large card with a trend line and the change versus the previous period), Collected, Outstanding now, Costs, Net, Orders, Average order. Changes are shown as ↑/↓ with a percentage; green or red depends on whether up is good (for costs, up is bad).
 - **Insights**: best day, top service and its share of sales, money collected from earlier orders, what this period's orders still owe, printed pieces, and unpaid orders across all time.
 - **Daily report** (table): one row per day (per month for ranges over two months) with orders, sales, collected split into Cash / InstaPay / Vodafone Cash / Other, costs and net, plus a total line. Its totals equal the KPI cards. **Excel** button exports it.
+- **Sales by service, in detail** (expandable table): category › service › operation (Print / Copy / Scan, or the item's name for writing items, office supplies and other services) › options (colour · sides · glossy). Every row shows jobs, printed pieces, sales and share of the period's sales, with a bar in its category's colour. Categories start open; **Expand all / Collapse all** and an **Excel** export (one line per most detailed item). Names typed differently (case, spaces, Arabic letter forms) count as one item.
 - **Charts**:
   - Sales and collected by day (a single day shows the 14 days up to it, with the day marked; by month for long ranges).
   - Sales by category: Printing / Engineering / Writing Category / Services, shown as one share bar.
@@ -334,10 +335,10 @@ One period filter controls everything on the page. The options are Today, Yester
   - Unpaid page by client (with totals, ages, search) or by order; merge two spellings of a client.
   - Client name required for unpaid orders; names matched across Arabic spellings.
   - Admin edits everything including the time; change log on every order; marking a mistake is logged and warns about debts.
-  - Dashboard: Sales / Collected / Outstanding / Net (collected − costs), Daily report with Excel export; busy-times grid, top clients, 12-month chart and all hourly analysis removed.
+  - Dashboard: Sales / Collected / Outstanding / Net (collected − costs), Daily report with Excel export, expandable sales-by-service breakdown; busy-times grid, top clients, 12-month chart and all hourly analysis removed.
   - Exports carry status, paid, owed and paid date; local restore skips duplicates.
   - "Stationery" renamed "Writing Category / قسم الكتابة".
-  - `tests/money.html`: 110 automated money checks (run on the demo copy).
+  - `tests/money.html`: 125 automated checks (run on the demo copy).
 
 ---
 

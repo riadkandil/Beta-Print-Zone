@@ -216,6 +216,8 @@ const I18N = {
     'dash.noPrev': 'nothing to compare', 'dash.nodata': 'No data for this period',
     'chart.byDay': 'Sales and collected by day', 'chart.byDay14': 'Sales and collected · 14 days up to this day', 'chart.byMonth': 'Sales and collected by month',
     'chart.pay': 'Collected by payment method', 'chart.svc': 'Top services by sales', 'chart.costs': 'Costs by type',
+    'chart.svcTree': 'Sales by service, in detail', 'svct.expandAll': 'Expand all', 'svct.collapseAll': 'Collapse all', 'svct.unnamed': 'Not specified',
+    'th.pieces': 'Pieces', 'xh.category': 'Category', 'xh.op': 'Operation / item', 'xh.options': 'Options', 'sheet.svc': 'Sales by service',
     'chart.daily': 'Daily report', 'chart.monthly': 'Monthly report', 'rep.total': 'Total', 'rep.export': 'Excel', 'chart.table': 'Table', 'chart.chart': 'Chart',
     'legend.sales': 'Sales', 'legend.collected': 'Collected', 'legend.costs': 'Costs', 'th.period': 'Period', 'th.jobs': 'Jobs', 'th.net': 'Net',
 
@@ -359,6 +361,8 @@ const I18N = {
     'dash.noPrev': 'لا توجد بيانات للمقارنة', 'dash.nodata': 'لا توجد بيانات لهذه الفترة',
     'chart.byDay': 'المبيعات والمحصّل حسب اليوم', 'chart.byDay14': 'المبيعات والمحصّل · 14 يوماً حتى هذا اليوم', 'chart.byMonth': 'المبيعات والمحصّل حسب الشهر',
     'chart.pay': 'المحصّل حسب طريقة الدفع', 'chart.svc': 'أعلى الخدمات مبيعاً', 'chart.costs': 'المصاريف حسب النوع',
+    'chart.svcTree': 'المبيعات حسب الخدمة بالتفصيل', 'svct.expandAll': 'فتح الكل', 'svct.collapseAll': 'إغلاق الكل', 'svct.unnamed': 'غير محدد',
+    'th.pieces': 'القطع', 'xh.category': 'الفئة', 'xh.op': 'العملية / البند', 'xh.options': 'الخيارات', 'sheet.svc': 'المبيعات حسب الخدمة',
     'chart.daily': 'التقرير اليومي', 'chart.monthly': 'التقرير الشهري', 'rep.total': 'الإجمالي', 'rep.export': 'Excel', 'chart.table': 'جدول', 'chart.chart': 'رسم',
     'legend.sales': 'المبيعات', 'legend.collected': 'المحصّل', 'legend.costs': 'المصاريف', 'th.period': 'الفترة', 'th.jobs': 'المرات', 'th.net': 'الصافي',
 

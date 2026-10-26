@@ -3,7 +3,7 @@
 /* One period filter scopes the KPIs, the insights, the charts and the daily report.
    Sales count orders on their own date; Collected counts money on the day it came in;
    Outstanding is what is owed right now, whatever the period. Net = Collected − Costs. */
-const DS = { range: 'today', day: null, tables: new Set() };
+const DS = { range: 'today', day: null, tables: new Set(), svcOpen: null, svcTxs: [] };
 const daysInMonth = d => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 const sumBy = (list, f) => list.reduce((s, x) => s + (x[f] || 0), 0);
 const dayDiff = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
@@ -205,6 +205,108 @@ function exportReport() {
   toast(t('toast.expDone'));
 }
 
+/* ---------- sales by service, in detail ---------- */
+/* Each item is filed under category › service › operation (or item name) › options */
+function itemPath(it) {
+  const cat = itemCat(it);
+  const path = [[cat, t('cat.' + cat)]];
+  if (it.type === 'custom' || it.type === 'simple') {
+    const svc = it.type === 'custom' ? 'custom' : it.svc, desc = (it.desc || '').trim();
+    // names typed differently (case, spaces, Arabic letter forms) count as one item
+    path.push([svc, svcLabel(svc)], ['d:' + clientKey(desc), desc || t('svct.unnamed')]);
+    return path;
+  }
+  // Engineering is its own category, so it skips the service level instead of repeating its name
+  if (it.svc !== cat) path.push([it.svc, svcLabel(it.svc)]);
+  if (!it.op) return path;
+  // the same short Print / Copy / Scan names as the buttons on the New order cards
+  path.push([it.op, I18N.en['opb.' + it.op] ? t('opb.' + it.op) : valLabel(it.op)]);
+  const color = it.color && it.color !== '—' ? it.color : '';
+  if (it.op !== 'scan' && color) {
+    const label = [valLabel(color), valLabel(it.face === 'two' ? 'two' : 'one'), it.finish === 'glossy' ? valLabel('glossy') : ''].filter(Boolean).join(' · ');
+    path.push(['o:' + [color, it.face, it.finish].join('|'), label]);
+  }
+  return path;
+}
+/* Every level adds up its jobs (items), printed pieces and sales */
+function serviceTree(txs) {
+  const root = { kids: new Map() };
+  txs.forEach(tx => (tx.items || []).forEach(it => {
+    const sales = it.total || 0, pieces = it.noQty ? 0 : it.qty || 0;
+    let node = root;
+    for (const [key, label] of itemPath(it)) {
+      if (!node.kids.has(key)) node.kids.set(key, { key, label, sales: 0, jobs: 0, pieces: 0, kids: new Map() });
+      node = node.kids.get(key);
+      node.sales = round2(node.sales + sales); node.jobs++; node.pieces += pieces;
+    }
+  }));
+  return root;
+}
+/* Categories keep their usual order, the rest go by sales; a lone "not specified" child adds nothing */
+function treeKids(node, depth) {
+  const kids = [...node.kids.values()];
+  if (kids.length === 1 && kids[0].key === 'd:') return [];
+  return depth === 0 ? kids.sort((a, b) => CAT_ORDER.indexOf(a.key) - CAT_ORDER.indexOf(b.key)) : kids.sort((a, b) => b.sales - a.sales);
+}
+/* Rows to show: a node's children appear while it is open. Categories start open. */
+const svcOpen = () => DS.svcOpen || new Set(CAT_ORDER.map(c => '/' + c));
+function svcTreeRows(root, all) {
+  const rows = [], open = svcOpen();
+  const walk = (node, depth, path, cat) => treeKids(node, depth).forEach(k => {
+    const id = path + '/' + k.key, c = depth === 0 ? k.key : cat;
+    const hasKids = treeKids(k, depth + 1).length > 0, isOpen = hasKids && (all || open.has(id));
+    rows.push({ k, depth, id, cat: c, hasKids, open: isOpen });
+    if (isOpen) walk(k, depth + 1, id, c);
+  });
+  walk(root, 0, '', null);
+  return rows;
+}
+function renderSvcTree(focusId) {
+  const root = serviceTree(DS.svcTxs);
+  const rows = svcTreeRows(root), expandable = svcTreeRows(root, true).filter(r => r.hasKids);
+  const allOpen = expandable.length > 0 && expandable.every(r => svcOpen().has(r.id));
+  const cats = [...root.kids.values()];
+  const total = { jobs: sumBy(cats, 'jobs'), pieces: sumBy(cats, 'pieces'), sales: round2(sumBy(cats, 'sales')) };
+  const acts = rows.length ? `<span class="cc-acts">${expandable.length ? `<button type="button" class="link-btn" data-svc-all="${allOpen ? 0 : 1}">${ic(allOpen ? 'chevrons-down-up' : 'chevrons-up-down')}${t(allOpen ? 'svct.collapseAll' : 'svct.expandAll')}</button>` : ''}<button type="button" class="link-btn" data-svc-xlsx>${ic('download')}${t('rep.export')}</button></span>` : '';
+  const head = `<div class="cc-head"><h3>${escapeHtml(t('chart.svcTree'))}</h3>${acts}</div>`;
+  if (!rows.length) { $('cSvcTree').innerHTML = head + `<div class="empty sm"><p>${t('dash.nodata')}</p></div>`; return; }
+  const pct = v => (total.sales ? Math.round(v / total.sales * 1000) / 10 : 0) + '%';
+  const body = rows.map(r => {
+    const name = r.hasKids
+      ? `<button type="button" class="st-tog" data-node="${escapeHtml(r.id)}" aria-expanded="${r.open}">${ic('chevron-right')}<span>${escapeHtml(r.k.label)}</span></button>`
+      : `<span class="st-leaf">${escapeHtml(r.k.label)}</span>`;
+    const share = total.sales ? r.k.sales / total.sales : 0;
+    return `<tr class="d${r.depth}"><td class="st-name" style="--depth:${r.depth}">${name}</td>`
+      + `<td class="st-barcell"><span class="st-bar k${CAT_ORDER.indexOf(r.cat) + 1}" style="--w:${share.toFixed(4)}" data-tip-v="${escapeHtml(fmtMoney(r.k.sales))}" data-tip-l="${escapeHtml(r.k.label + ' · ' + pct(r.k.sales))}"></span></td>`
+      + `<td>${fmtInt(r.k.jobs)}</td><td>${r.k.pieces ? fmtInt(r.k.pieces) : '—'}</td><td>${fmtNum(r.k.sales)}</td><td>${pct(r.k.sales)}</td></tr>`;
+  }).join('');
+  const th = [t('xh.svc'), t('legend.sales'), t('th.jobs'), t('th.pieces'), t('legend.sales'), t('th.share')];
+  $('cSvcTree').innerHTML = head + `<div class="table-wrap"><table class="data-table svc-tree"><thead><tr>${th.map((h, i) => `<th${i === 1 ? ' class="st-barcell"' : ''}>${i === 1 ? '' : escapeHtml(h)}</th>`).join('')}</tr></thead>`
+    + `<tbody>${body}</tbody><tfoot><tr><td>${escapeHtml(t('rep.total'))}</td><td></td><td>${fmtInt(total.jobs)}</td><td>${total.pieces ? fmtInt(total.pieces) : '—'}</td><td>${fmtNum(total.sales)}</td><td>100%</td></tr></tfoot></table></div>`;
+  // keep the keyboard on the row that was just opened or closed
+  if (focusId) { const b = [...$('cSvcTree').querySelectorAll('[data-node]')].find(x => x.dataset.node === focusId); if (b) b.focus(); }
+}
+/* One line per most detailed item, with its category, service, operation and options, so it pivots easily */
+function exportSvcTree() {
+  const p = periodFor(DS.range), root = serviceTree(DS.svcTxs);
+  const aoa = [[t('xh.category'), t('xh.svc'), t('xh.op'), t('xh.options'), t('th.jobs'), t('th.pieces'), t('legend.sales')]];
+  const walk = (node, depth, labels) => {
+    const kids = treeKids(node, depth);
+    if (!kids.length && depth) { aoa.push([...labels, '', '', ''].slice(0, 4).concat([node.jobs, node.pieces, node.sales])); return; }
+    kids.forEach(k => walk(k, depth + 1, [...labels, k.label]));
+  };
+  walk(root, 0, []);
+  const cats = [...root.kids.values()];
+  aoa.push([t('rep.total'), '', '', '', sumBy(cats, 'jobs'), sumBy(cats, 'pieces'), round2(sumBy(cats, 'sales'))]);
+  const wb = XLSX.utils.book_new();
+  if (lang === 'ar') wb.Workbook = { Views: [{ RTL: true }] };
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [16, 20, 22, 24, 8, 9, 12].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, t('sheet.svc'));
+  XLSX.writeFile(wb, `PrintZone_services_${p.from}_${p.to}.xlsx`);
+  toast(t('toast.expDone'));
+}
+
 function renderDashboard() {
   if (state.role !== 'admin') return;
   const p = periodFor(DS.range);
@@ -269,6 +371,9 @@ function renderDashboard() {
   $('cDaily').innerHTML = `<div class="cc-head"><h3>${escapeHtml(t(rep.byMonth ? 'chart.monthly' : 'chart.daily'))}</h3>${hasRep ? `<button type="button" class="link-btn" data-report="xlsx">${ic('download')}${t('rep.export')}</button>` : ''}</div>`
     + (hasRep ? reportTable(rep) : `<div class="empty sm"><p>${t('dash.nodata')}</p></div>`);
 
+  DS.svcTxs = cur.txs;
+  renderSvcTree();
+
   const mix = {};
   cur.txs.forEach(tx => (tx.items || []).forEach(it => { const c = itemCat(it); mix[c] = (mix[c] || 0) + (it.total || 0); }));
   const mixRows = CAT_ORDER.map((c, i) => ({ label: t('cat.' + c), value: mix[c] || 0, cls: 'k' + (i + 1) }));
@@ -321,6 +426,21 @@ $('dDay').addEventListener('change', () => {
 });
 $('pageDashboard').addEventListener('click', e => {
   if (e.target.closest('[data-report]')) { exportReport(); return; }
+  const node = e.target.closest('[data-node]');
+  if (node) {
+    const open = new Set(svcOpen()), id = node.dataset.node;
+    open.has(id) ? open.delete(id) : open.add(id);
+    DS.svcOpen = open;
+    renderSvcTree(id);
+    return;
+  }
+  const all = e.target.closest('[data-svc-all]');
+  if (all) {
+    DS.svcOpen = new Set(all.dataset.svcAll === '1' ? svcTreeRows(serviceTree(DS.svcTxs), true).filter(r => r.hasKids).map(r => r.id) : []);
+    renderSvcTree();
+    return;
+  }
+  if (e.target.closest('[data-svc-xlsx]')) { exportSvcTree(); return; }
   const b = e.target.closest('[data-table]'); if (!b) return;
   const id = b.dataset.table;
   DS.tables.has(id) ? DS.tables.delete(id) : DS.tables.add(id);
