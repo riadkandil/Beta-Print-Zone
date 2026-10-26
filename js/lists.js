@@ -215,7 +215,7 @@ function renderUnpaid() {
   }
   $('uList').innerHTML = groups.map(g => {
     const open = U.open.has(g.key) || groups.length === 1;
-    const sub = [t('unpaid.orders', { n: g.txs.length }), t('unpaid.oldest', { a: ageLabel(g.oldest) })].join(' · ');
+    const sub = [g.txs.length === 1 ? t('unpaid.order1') : t('unpaid.orders', { n: g.txs.length }), t('unpaid.oldest', { a: ageLabel(g.oldest) })].join(' · ');
     const paid = round2(g.total - g.owed);
     return `<article class="cgroup${open ? ' open' : ''}" data-key="${escapeHtml(g.key)}">
       <div class="cg-head">
