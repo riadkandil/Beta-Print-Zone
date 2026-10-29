@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "365695169107",
   appId: "1:365695169107:web:159c4f1ad6283c38928ca6"
 };
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.2.1';
 /* Defaults used only when the database has no passwords yet (same as the classic app) */
 const DEFAULT_EMP_PW = '1234';
 const DEFAULT_ADMIN_PW = 'mkmass45';
@@ -151,6 +151,7 @@ const I18N = {
     'inv.title': 'Current order', 'inv.clear': 'Clear', 'inv.empty': 'No items selected', 'inv.emptySub': 'Pick a service to get started', 'inv.total': 'Total', 'inv.final': 'total price',
     'newtx.clientReq': 'Client name (required when not paid)', 'newtx.needClient': 'Enter the client name: it is required for unpaid orders',
     'edit.belowPaid': 'The total cannot be less than the {n} already paid',
+    'newtx.futureDate': 'The order date cannot be after today', 'hist.savedOn': 'saved {d}',
     'newtx.client': 'Client', 'newtx.optional': 'Optional', 'newtx.addNote': 'Note', 'newtx.notesPh': 'Any extra details…', 'newtx.defaultClient': 'Client',
     'pay.section': 'Payment', 'pay.otherPh': 'e.g. Bank transfer…',
     'save.tx': 'Place order', 'save.update': 'Update transaction', 'save.short': 'Save',
@@ -296,6 +297,7 @@ const I18N = {
     'inv.title': 'الطلب الحالي', 'inv.clear': 'مسح', 'inv.empty': 'لا توجد بنود بعد', 'inv.emptySub': 'اختر خدمة للبدء', 'inv.total': 'الإجمالي', 'inv.final': 'سعر إجمالي',
     'newtx.clientReq': 'اسم العميل (مطلوب لغير المدفوع)', 'newtx.needClient': 'اكتب اسم العميل: مطلوب للطلبات غير المدفوعة',
     'edit.belowPaid': 'لا يمكن أن يكون الإجمالي أقل من {n} المدفوعة بالفعل',
+    'newtx.futureDate': 'لا يمكن أن يكون تاريخ الطلب بعد اليوم', 'hist.savedOn': 'سُجّلت {d}',
     'newtx.client': 'العميل', 'newtx.optional': 'اختياري', 'newtx.addNote': 'ملاحظة', 'newtx.notesPh': 'أي تفاصيل إضافية…', 'newtx.defaultClient': 'عميل',
     'pay.section': 'الدفع', 'pay.otherPh': 'مثلاً: تحويل بنكي…',
     'save.tx': 'تسجيل الطلب', 'save.update': 'تحديث المعاملة', 'save.short': 'حفظ',

@@ -6,7 +6,7 @@ Print Zone **v3.2** is the main app. The classic app is still online as a fallba
 
 | Version | Path | Status |
 |---|---|---|
-| Print Zone (main) | `/` | v3.2 |
+| Print Zone (main) | `/` | v3.2.1 |
 | Classic (fallback) | `/classic/` | v1.12 |
 | Old beta links | `/beta/` | Redirect to `/` |
 | Demo | `/demo/` | v3.2 with sample data, never touches the shop's database |
@@ -179,7 +179,7 @@ Eleven services in three groups on one screen, no tabs:
 
 - **Header**: "Current order · Order #N today".
 - **Client name**: optional for paid orders (it defaults to "Client"), **required when the payment is Not paid**. The field says so as soon as Not paid is picked, and saving is blocked with a red outline until a name is typed. Past names are suggested, one spelling per client.
-- **Date** follows today unless changed.
+- **Date** follows today unless changed. It cannot be after today: the calendar stops at today and saving refuses a later date (v3.2.1).
 - **Lines**: service icon, title, details, quantity stepper, line total, remove. Tap a line to edit it.
 - **Totals**: number of items and grand total.
 - **Payment**: Cash, InstaPay, Vodafone Cash, Not paid, Other (free text).
@@ -340,6 +340,7 @@ One period filter controls everything on the page. The options are Today, Yester
   - Exports carry status, paid, owed and paid date; local restore skips duplicates.
   - "Stationery" renamed "Writing Category / قسم الكتابة".
   - `tests/money.html`: 125 automated checks (run on the demo copy).
+- **v3.2.1**: the order date cannot be after today; History shows "saved <date time>" for an order entered on a later day than its date.
 
 ---
 

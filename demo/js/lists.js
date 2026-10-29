@@ -57,7 +57,7 @@ function txCard(tx, opts = {}) {
     + (owing ? (part ? `<span class="badge">${ic('check')}${escapeHtml(t('xh.paid') + ' ' + fmtNum(paidAmount(tx)))}</span>` : '')
       : due > 0 ? `<span class="badge danger">${ic('clock')}${escapeHtml(part ? t('pay.owes', { n: fmtNum(due) }) : payLabel(tx))}</span>` : '');
   const meta = owing ? (opts.inGroup ? ageLabel(tx.date) : fmtDate(tx.date) + ' · ' + ageLabel(tx.date))
-    : [tx.createdAt ? fmtTime(tx.createdAt) : '', due > 0 ? '' : payLabel(tx)].filter(Boolean).join(' · ');
+    : [tx.createdAt ? savedLabel(tx) : '', due > 0 ? '' : payLabel(tx)].filter(Boolean).join(' · ');
   const amount = owing ? due : tx.total || 0;
   const pay = opts.payBtn && due > 0 ? `<button type="button" class="btn btn-sm btn-save row-pay" data-act="paid">${ic('banknote')}<span>${t('pay.record')}</span></button>` : '';
   return `<article class="tx${tx.mistake ? ' mistake' : ''}${open ? ' open' : ''}" data-id="${escapeHtml(tx.id)}">
@@ -75,6 +75,8 @@ const ageDays = date => Math.round((new Date(todayStr() + 'T00:00:00') - new Dat
 function ageLabel(date) { const n = ageDays(date); return n <= 0 ? t('unpaid.today') : t('unpaid.daysAgo', { n }); }
 const roleName = by => t('role.' + (by === 'admin' ? 'admin' : 'employee'));
 const stamp = iso => (isoDay(iso) ? fmtDate(isoDay(iso), { day: 'numeric', month: 'short' }) + ' ' + fmtTime(iso) : '');
+/* An order typed in on a later day shows when it was saved, not just a time that looks like that day's */
+const savedLabel = tx => (isoDay(tx.createdAt) === tx.date ? fmtTime(tx.createdAt) : t('hist.savedOn', { d: stamp(tx.createdAt) }));
 /* One change-log line: what changed, old → new */
 function logLine(e) {
   if (e.kind === 'mistake' || e.kind === 'unmistake') return t('log.' + e.kind);

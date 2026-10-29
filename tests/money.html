@@ -226,6 +226,38 @@ async function testNewOrder() {
   win.document.getElementById('cClient').value = '';
   await E('saveTx')();
   eq('paid orders still need no name', E('state.transactions').length, 2);
+
+  section('New order: no dates after today');
+  await load([]);
+  E('resetCart')();
+  const cDate = win.document.getElementById('cDate');
+  eq('the calendar stops at today', cDate.max, T);
+  await addLine(30);
+  cDate.value = D(-1); E('cart').dateTouched = true;
+  await E('saveTx')();
+  eq('tomorrow is refused', E('state.transactions').length, 0);
+  eq('the order stays in the cart', E('cart.lines.length'), 1);
+  cDate.value = D(2);
+  await E('saveTx')();
+  const back = E('state.transactions')[0];
+  eq('an earlier day is fine', back && back.date, D(2));
+  await load([order('f1', -1, 'Ali', 50, 'cash')]);
+  await E('editTransaction')(tx('f1'));
+  E('cart').lines[0].total = 60; E('cart').lines[0].price = 60;
+  await E('saveTx')();
+  eq('an edit keeping a future date is refused', tx('f1').total, 50);
+  cDate.value = D(0); E('cart').dateTouched = true;
+  await E('saveTx')();
+  eq('moving it to today saves', [tx('f1').total, tx('f1').date], [60, D(0)]);
+  E('resetCart')();
+
+  section('History: an order typed in later shows when it was saved');
+  const late = order('s1', 2, 'Mona', 20, 'cash', { createdAt: new Date().toISOString() });
+  const card = win.document.createElement('div'); card.innerHTML = E('txCard')(late);
+  const meta = card.querySelector('.tx-meta').textContent;
+  ok('it says "saved" with today\'s date', meta.includes('saved ') && meta.includes(E('fmtDate')(T, { day: 'numeric', month: 'short' })), meta);
+  card.innerHTML = E('txCard')(order('s2', 2, 'Mona', 20, 'cash'));
+  ok('an order saved on its own day shows only the time', !card.querySelector('.tx-meta').textContent.includes('saved'), card.querySelector('.tx-meta').textContent);
 }
 
 async function pay(txs, amount, method = 'cash') {

@@ -371,6 +371,9 @@ $('cClient').addEventListener('input', () => $('cClient').parentElement.classLis
 $('payChips').addEventListener('click', e => { const c = e.target.closest('.pchip'); if (!c) return; setPay(c.dataset.pay); if (cart.pay === 'other') $('payOther').focus(); });
 $('noteToggle').addEventListener('click', () => { $('cNotes').hidden = false; $('cNotes').focus(); });
 $('cDate').addEventListener('input', () => { cart.dateTouched = true; });
+/* The calendar stops at today, so a day picked in the wrong month cannot land in the future */
+const syncDateMax = () => { $('cDate').max = todayStr(); };
+['focus', 'pointerdown'].forEach(ev => $('cDate').addEventListener(ev, syncDateMax));
 
 /* past names, newest first, one spelling per client so the list suggests the name already in use */
 const clientIndex = memoTx(() => {
@@ -419,6 +422,7 @@ async function saveTx() {
     engMeters: round2(items.reduce((s, it) => s + (it.engLength || 0), 0)),
   };
   try {
+    if (data.date > todayStr()) { toast(t('newtx.futureDate'), { error: true, ms: 5000 }); $('cDate').focus(); return; }
     if (cart.editingTx) {
       // work from the latest copy, so a payment recorded meanwhile is not lost
       const cur = state.transactions.find(x => x.id === cart.editingTx.id) || cart.editingTx;
@@ -463,7 +467,7 @@ $('sbSave').addEventListener('click', saveTx);
 
 function resetCart() {
   cart.lines = []; cart.editingTx = null; cart.dateTouched = false; cart.returnTo = null;
-  $('cClient').value = ''; $('cNotes').value = ''; $('cNotes').hidden = true; $('cDate').value = todayStr();
+  $('cClient').value = ''; $('cNotes').value = ''; $('cNotes').hidden = true; $('cDate').value = todayStr(); syncDateMax();
   $('cTime').value = ''; $('cTimeWrap').hidden = true; $('cDate').closest('.order-fields').classList.remove('editing');
   setPay('cash'); $('payOther').value = '';
   $('editBanner').hidden = true;
@@ -523,6 +527,7 @@ pageRenderers.pageNew = function renderPos() {
   renderCart();
   fillClientList();
   if (!cart.dateTouched) $('cDate').value = todayStr();
+  syncDateMax();
   if (B.svc) { if (!isPaperSvc(B.svc)) fillDescList(); if (B.priceAuto) prefillPrice(); refreshBuilderState(); }
   updateSaveBar();
 };
@@ -532,4 +537,4 @@ onLangChange.push(() => {
   $('btnSaveLabel').textContent = t(cart.editingTx ? 'save.update' : 'save.tx');
   if (cart.editingTx) $('editBannerTxt').textContent = t('edit.banner', { date: fmtDate(cart.editingTx.date) });
 });
-function initPos() { $('cDate').value = todayStr(); setPay('cash'); updateBuilder(); renderCart(); }
+function initPos() { $('cDate').value = todayStr(); syncDateMax(); setPay('cash'); updateBuilder(); renderCart(); }
